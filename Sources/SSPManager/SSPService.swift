@@ -67,7 +67,10 @@ final class SSPService {
     }
 
     private func q(_ s: String) -> String { "'\(s.replacingOccurrences(of: "'", with: "'\\''"))'" }
-    private func abs(_ p: String) -> String { p.hasPrefix("/") ? p : "\(root)/\(p)" }
+    private func abs(_ p: String) -> String {
+        if p.isEmpty { return root }
+        return p.hasPrefix("/") ? p : "\(root)/\(p)"
+    }
 
     // ---- device -------------------------------------------------------------
 
@@ -156,6 +159,71 @@ final class SSPService {
         note("$ scp -O \(r) -> \(destDir.path)")
         if rc2 != 0 { note(e) }
         return rc2 == 0
+    }
+
+    /// Convert local audio (aif/flac/mp3) to 48k 24-bit WAV in a temp dir
+    /// (afconvert), then upload wav + renamed sidecars into remoteDir.
+    /// Non-audio files are uploaded unchanged. Returns count converted/uploaded.
+    func convertUpload(local: URL, remoteDir: String) async -> Int {
+        busy = true; defer { busy = false }
+        let audioExt: Set<String> = ["aif", "aiff", "aifc", "flac", "mp3", "m4a", "ogg"]
+        var files: [URL] = []
+        var isDir: ObjCBool = false
+        FileManager.default.fileExists(atPath: local.path, isDirectory: &isDir)
+        if isDir.boolValue {
+            if let e = FileManager.default.enumerator(at: local, includingPropertiesForKeys: nil) {
+                for case let u as URL in e { files.append(u) }
+            }
+        } else { files = [local] }
+
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("sspconv-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tmp) }
+
+        // stage converted output in tmp tree, preserving relative paths,
+        // then stream as one folder: remoteDir/<folder name>/...
+        let stage = tmp.appendingPathComponent(local.lastPathComponent)
+        try? FileManager.default.createDirectory(at: stage, withIntermediateDirectories: true)
+        var done = 0
+        for f in files {
+            let ext = f.pathExtension.lowercased()
+            guard !ext.isEmpty else { continue }
+            var rel = f.path
+            if isDir.boolValue, rel.hasPrefix(local.path + "/") {
+                rel = String(rel.dropFirst(local.path.count + 1))
+            } else { rel = f.lastPathComponent }
+            let relURL = URL(fileURLWithPath: rel)
+            var out = stage.appendingPathComponent(rel)
+            var src = f
+            if audioExt.contains(ext) {
+                out = out.deletingPathExtension().appendingPathExtension("wav")
+                try? FileManager.default.createDirectory(
+                    at: out.deletingLastPathComponent(), withIntermediateDirectories: true)
+                let (rc, _, e) = await Self.run("/usr/bin/afconvert",
+                    ["-f", "WAVE", "-d", "LEI24", f.path, out.path])
+                if rc != 0 { note("afconvert \(f.lastPathComponent): \(e)"); continue }
+                src = out
+                for sfx in [".yaml", "_tags.yaml", "_edits.yaml", ".sfc", ".wfx"] {
+                    let sc = URL(fileURLWithPath: f.path + sfx)
+                    if FileManager.default.fileExists(atPath: sc.path) {
+                        let d = URL(fileURLWithPath: out.path + sfx)
+                        try? FileManager.default.copyItem(at: sc, to: d)
+                    }
+                }
+            } else {
+                try? FileManager.default.createDirectory(
+                    at: out.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try? FileManager.default.copyItem(at: f, to: out)
+            }
+            done += 1
+        }
+        let dstDir = abs(remoteDir) + "/" + local.lastPathComponent
+        let (rc, _, e) = await shell(
+            "COPYFILE_DISABLE=1 tar cf - -C '\(stage.path)' . | /usr/bin/ssh -o BatchMode=yes root@\(host) \"mkdir -p '\(dstDir)' && tar xf - -C '\(dstDir)' && sync\"")
+        if rc != 0 { note(e); return 0 }
+        note("convertUpload: \(done) file(s) -> \(dstDir)")
+        return done
     }
 
     // ---- plugins ------------------------------------------------------------

@@ -1,12 +1,14 @@
 import SwiftUI
 
-/// Remote file browser over SSH: navigate, mkdir, rename, trash, up/download.
+/// Local navigator (left) + remote card browser (right). All remote actions
+/// live in the right pane's own toolbar row.
 struct FileBrowserView: View {
     @Environment(SSPService.self) private var ssp
-    @State private var path = "samples"          // relative to /media/BOOT
+    @State private var path = "samples"
     @State private var items: [RemoteItem] = []
-    @State private var sel: RemoteItem.ID?
-    private var selItem: RemoteItem? { items.first { $0.id == sel } }
+    @State private var sel = Set<RemoteItem.ID>()
+    private var selItems: [RemoteItem] { items.filter { sel.contains($0.id) } }
+    private var selItem: RemoteItem? { selItems.count == 1 ? selItems[0] : nil }
     @State private var showPicker = false
     @State private var showTrash = false
     @State private var renaming = false
@@ -31,76 +33,95 @@ struct FileBrowserView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // toolbar
-            HStack(spacing: 8) {
-                Toggle("Trash", isOn: $showTrash).toggleStyle(.checkbox)
-                    .onChange(of: showTrash) { Task { await load() } }
-                Divider().frame(height: 16)
-                Button { up() } label: { Image(systemName: "arrow.up") }
-                    .disabled(showTrash || path.isEmpty)
-                Text(showTrash ? ".trash" : "/" + path)
-                    .font(.system(.body, design: .monospaced))
-                    .lineLimit(1).truncationMode(.middle)
-                Spacer()
-                Button { Task { await load() } } label: { Image(systemName: "arrow.clockwise") }
-                Button { makingDir = true } label: { Image(systemName: "folder.badge.plus") }
-                    .disabled(showTrash)
-                Button { showPicker = true } label: { Label("Upload", systemImage: "arrow.up.doc") }
-                    .disabled(showTrash)
-                Button {
-                    if let s = selItem {
-                        Task {
-                            let dst = URL(fileURLWithPath: NSHomeDirectory() + "/Downloads")
-                            _ = await ssp.download(remotePath: s.path, localDir: dst)
-                        }
-                    }
-                } label: { Label("Download", systemImage: "arrow.down.doc") }
-                    .disabled(selItem == nil)
-                Button { if let s = selItem { renaming = true; newName = s.name } }
-                    label: { Image(systemName: "pencil") }
-                    .disabled(sel == nil || showTrash)
-                Button {
-                    if let s = selItem {
-                        Task { await ssp.deleteToTrash(s.path); await load() }
-                    }
-                } label: { Image(systemName: "trash") }
-                    .disabled(sel == nil || showTrash)
-                if showTrash {
-                    Button("Empty") { Task { await ssp.emptyTrash(); await load() } }
-                }
-            }
-            .padding(8)
+        HSplitView {
+            LocalPane(remoteDir: path) { Task { await load() } }
+                .frame(minWidth: 300)
 
-            Table(items, selection: $sel) {
-                TableColumn("Name") { it in
-                    Label(it.name, systemImage: it.isDir ? "folder" : iconFor(it.name))
+            VStack(spacing: 0) {
+                // remote nav row
+                HStack(spacing: 6) {
+                    Button { up() } label: { Image(systemName: "arrow.up") }
+                        .disabled(showTrash || path.isEmpty)
+                    Text(showTrash ? ".trash" : "/" + path)
+                        .font(.caption).lineLimit(1).truncationMode(.middle)
+                    Spacer()
+                    Button { Task { await load() } }
+                        label: { Image(systemName: "arrow.clockwise") }
                 }
-                TableColumn("Size") { it in Text(it.size).monospaced() }
-                    .width(90)
-                TableColumn("Path") { it in
-                    Text(it.path.replacingOccurrences(of: ssp.root, with: ""))
-                        .foregroundStyle(.secondary).lineLimit(1)
-                }
-            }
-            .contextMenu(forSelectionType: RemoteItem.self) { selItems in
-                if let it = selItems.first {
-                    if it.isDir { Button("Open") { go(it) } }
-                    Button("Download") {
+                .padding(.horizontal, 6).padding(.top, 6)
+
+                // remote actions row
+                HStack(spacing: 8) {
+                    Toggle("Trash", isOn: $showTrash).toggleStyle(.checkbox)
+                        .onChange(of: showTrash) { Task { await load() } }
+                    Divider().frame(height: 16)
+                    Button { makingDir = true } label: { Image(systemName: "folder.badge.plus") }
+                        .disabled(showTrash).help("New folder")
+                    Button { showPicker = true } label: { Image(systemName: "arrow.up.doc") }
+                        .disabled(showTrash).help("Upload files")
+                    Button {
                         Task {
-                            _ = await ssp.download(remotePath: it.path,
-                                localDir: URL(fileURLWithPath: NSHomeDirectory() + "/Downloads"))
+                            for s in selItems {
+                                _ = await ssp.download(remotePath: s.path,
+                                    localDir: URL(fileURLWithPath: NSHomeDirectory() + "/Downloads"))
+                            }
                         }
-                    }
-                    if !showTrash {
-                        Button("Rename") { sel = it.id; renaming = true; newName = it.name }
-                        Button("Delete", role: .destructive) {
-                            Task { await ssp.deleteToTrash(it.path); await load() }
+                    } label: { Image(systemName: "arrow.down.doc") }
+                        .disabled(sel.isEmpty).help("Download to ~/Downloads")
+                    Button { if let s = selItem, s.isDir { go(s) } }
+                        label: { Image(systemName: "folder.badge.arrow.up.forward") }
+                        .disabled(!(selItem?.isDir ?? false)).help("Open folder")
+                    Button { if let s = selItem { renaming = true; newName = s.name } }
+                        label: { Image(systemName: "pencil") }
+                        .disabled(selItem == nil || showTrash).help("Rename")
+                    Button {
+                        Task {
+                            for s in selItems { await ssp.deleteToTrash(s.path) }
+                            await load()
                         }
+                    } label: { Image(systemName: "trash") }
+                        .disabled(sel.isEmpty || showTrash).help("Move to trash")
+                    if showTrash {
+                        Button("Empty") { Task { await ssp.emptyTrash(); await load() } }
                     }
+                    Spacer()
                 }
-            } primaryAction: { selItems in
-                if let it = selItems.first { go(it) }
+                .padding(.horizontal, 6).padding(.vertical, 4)
+
+                Table(items, selection: $sel) {
+                    TableColumn("Name") { it in
+                        if it.isDir {
+                            Button { go(it) } label: {
+                                Label(it.name, systemImage: "folder")
+                                    .foregroundStyle(.primary)
+                            }
+                            .buttonStyle(.plain)
+                        } else {
+                            Label(it.name, systemImage: iconFor(it.name))
+                        }
+                    }
+                    TableColumn("Size") { it in Text(it.size).monospaced() }
+                        .width(90)
+                }
+                .contextMenu(forSelectionType: RemoteItem.self) { selItems in
+                    if let it = selItems.first {
+                        if it.isDir { Button("Open") { go(it) } }
+                        Button("Download") {
+                            Task {
+                                _ = await ssp.download(remotePath: it.path,
+                                    localDir: URL(fileURLWithPath: NSHomeDirectory() + "/Downloads"))
+                            }
+                        }
+                        if !showTrash {
+                            Button("Rename") { sel = [it.id]; renaming = true; newName = it.name }
+                            Button("Delete", role: .destructive) {
+                                Task { await ssp.deleteToTrash(it.path); await load() }
+                            }
+                        }
+                    }
+                } primaryAction: { selItems in
+                    if let it = selItems.first, it.isDir { go(it) }
+                }
             }
         }
         .fileImporter(isPresented: $showPicker, allowedContentTypes: [.item, .folder],
@@ -140,5 +161,99 @@ struct FileBrowserView: View {
         if name.hasSuffix(".so") { return "puzzlepiece" }
         if name.hasSuffix(".pbp") { return "doc.on.doc" }
         return "doc"
+    }
+}
+
+struct LocalFile: Identifiable, Hashable {
+    let url: URL
+    var id: String { url.path }
+}
+
+/// Local filesystem navigator: browse dirs, select files, upload or
+/// convert-to-WAV then upload into the current remote directory.
+struct LocalPane: View {
+    @Environment(SSPService.self) private var ssp
+    let remoteDir: String
+    var onUploaded: () -> Void = {}
+    @State private var dir = URL(fileURLWithPath: NSHomeDirectory() + "/Music")
+    @State private var items: [LocalFile] = []
+    @State private var sel = Set<LocalFile.ID>()
+    @State private var working = ""
+
+    private static let audioExt: Set<String> =
+        ["aif", "aiff", "aifc", "wav", "flac", "mp3", "m4a", "ogg"]
+
+    private func isDir(_ u: URL) -> Bool {
+        (try? u.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
+    }
+    private func isAudio(_ u: URL) -> Bool {
+        Self.audioExt.contains(u.pathExtension.lowercased())
+    }
+
+    private func load() {
+        let raw = (try? FileManager.default.contentsOfDirectory(
+            at: dir, includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles])) ?? []
+        items = raw.sorted {
+            let d1 = isDir($0), d2 = isDir($1)
+            return d1 == d2 ? $0.lastPathComponent < $1.lastPathComponent : d1
+        }.map(LocalFile.init)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 6) {
+                Button { dir = dir.deletingLastPathComponent(); load() }
+                    label: { Image(systemName: "arrow.up") }
+                Text(dir.path.replacingOccurrences(of: NSHomeDirectory(), with: "~"))
+                    .font(.caption).lineLimit(1).truncationMode(.middle)
+                Spacer()
+                Button { load() } label: { Image(systemName: "arrow.clockwise") }
+            }
+            .padding(.horizontal, 6).padding(.top, 6)
+
+            Table(items, selection: $sel) {
+                TableColumn("local") { f in
+                    if isDir(f.url) {
+                        Button { dir = f.url; load() } label: {
+                            Label(f.url.lastPathComponent, systemImage: "folder")
+                                .font(.system(size: 12)).foregroundStyle(.primary)
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        Label(f.url.lastPathComponent, systemImage:
+                                isAudio(f.url) ? "waveform" : "doc")
+                            .font(.system(size: 12))
+                    }
+                }
+            }
+            .contextMenu(forSelectionType: LocalFile.self) { s in
+                if let f = s.first, isDir(f.url) { Button("Open") { dir = f.url; load() } }
+            } primaryAction: { s in
+                if let f = s.first, isDir(f.url) { dir = f.url; load() }
+            }
+
+            HStack(spacing: 8) {
+                Button {
+                    Task {
+                        working = "uploading…"
+                        for id in sel { _ = await ssp.upload(local: URL(fileURLWithPath: id), remoteDir: remoteDir) }
+                        working = ""; onUploaded()
+                    }
+                } label: { Label("Upload", systemImage: "arrow.up.doc") }
+                    .disabled(sel.isEmpty || !ssp.online)
+                Button {
+                    Task {
+                        working = "converting…"
+                        for id in sel { _ = await ssp.convertUpload(local: URL(fileURLWithPath: id), remoteDir: remoteDir) }
+                        working = ""; onUploaded()
+                    }
+                } label: { Label("→WAV + Upload", systemImage: "waveform.badge.plus") }
+                    .disabled(sel.isEmpty || !ssp.online)
+                Text(working).font(.caption).foregroundStyle(.secondary)
+            }
+            .padding(6)
+        }
+        .onAppear(perform: load)
     }
 }
