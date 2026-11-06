@@ -83,6 +83,9 @@ struct DeviceView: View {
                 Text("Host")
                 TextField("ip", text: $s.host).frame(width: 140)
                     .onSubmit { Task { await ssp.ping() } }
+                Text("Card root")
+                TextField("path", text: $s.root).frame(width: 130)
+                    .help("/media/BOOT on the 2022 image, /media/linaro/SYNTHOR on older")
                 Circle().fill(ssp.online ? .green : .red).frame(width: 8, height: 8)
                 Text(ssp.online ? "online" : "offline")
                 Button("Ping") { Task { await ssp.ping() } }

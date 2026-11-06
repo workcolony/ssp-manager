@@ -60,10 +60,24 @@ plugins, presets and sample conversion without pulling the SD card.
   The app shells out to `ssh`/`scp` (BatchMode, so keys are required — no
   password prompts).
 
+## First run
+
+1. Build/download (below), open the app — unsigned build, so
+   right-click → Open if Gatekeeper complains.
+2. Device pane: set **Host** to your SSP's IP (default `192.168.1.6`)
+   and **Card root** if it differs — `/media/BOOT` on the 2022 image,
+   `/media/linaro/SYNTHOR` on older images.
+3. Green dot = connected. The log at the bottom shows every ssh call
+   it makes — handy when something doesn't respond.
+4. Plugins pane: point *local staging* at any folder of `.so` files
+   you want to install (downloads from community releases).
+
 ## Build
 
     swift run                    # development
     ./scripts/make_app.sh        # build/SSPManager.app
+
+or grab `SSPManager.app.zip` from the latest Release.
 
 macOS 14+, no dependencies beyond the system `ssh`, `scp`, `tar` and
 `afconvert`.
