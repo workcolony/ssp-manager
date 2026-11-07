@@ -91,6 +91,21 @@ struct DeviceView: View {
                 Button("Ping") { Task { await ssp.ping() } }
             }
             HStack {
+                Text("Port")
+                Picker("", selection: $s.port) {
+                    ForEach(ssp.netPorts) { p in Text("\(p.name)  (\(p.device))").tag(p.name) }
+                }.frame(width: 280)
+                Button("Apply") { Task { await ssp.applyPort() } }
+                    .help("Sets a narrow subnet on this adapter so the SSP routes through it (admin prompt)")
+                Button { ssp.refreshPorts() } label: { Image(systemName: "arrow.clockwise") }
+                let dev = ssp.netPorts.first { $0.name == ssp.port }?.device ?? ""
+                let ok = !dev.isEmpty && ssp.routeIface == dev
+                Text(ssp.routeIface.isEmpty ? "no route"
+                     : ok ? "\(ssp.host) via \(dev)" : "\(ssp.host) via \(ssp.routeIface) — press Apply")
+                    .foregroundStyle(ok ? .green : .orange)
+            }
+            .onAppear { ssp.refreshPorts() }
+            HStack {
                 Text("Card space")
                 Text(disk.isEmpty ? "—" : disk).monospaced()
                 Button("Refresh") { Task { disk = await ssp.df() } }

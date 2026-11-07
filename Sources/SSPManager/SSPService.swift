@@ -12,9 +12,20 @@ struct RemoteItem: Identifiable, Hashable {
 
 /// SSH-backed operations against the SSP card. All UI-thread safe (@MainActor).
 /// dropbear has no sftp -> scp -O for files, tar-over-ssh for dirs.
+struct NetPort: Identifiable, Hashable {
+    let name: String      // service / hardware port name, e.g. "USB 10/100/1000 LAN"
+    let device: String    // current BSD name, e.g. "en8" (may change)
+    var id: String { name }
+}
+
 @MainActor @Observable
 final class SSPService {
     var host = "192.168.1.6"
+    var netPorts: [NetPort] = []
+    var port = UserDefaults.standard.string(forKey: "sspPort") ?? "" {
+        didSet { UserDefaults.standard.set(port, forKey: "sspPort") }
+    }
+    var routeIface = ""                 // interface the host currently routes through
     var root = "/media/BOOT"
     var busy = false
     var online = false
@@ -73,6 +84,53 @@ final class SSPService {
     }
 
     // ---- device -------------------------------------------------------------
+
+    private func run(_ exe: String, _ args: [String]) -> String {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: exe)
+        p.arguments = args
+        let pipe = Pipe(); p.standardOutput = pipe; p.standardError = pipe
+        try? p.run(); p.waitUntilExit()
+        return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+    }
+
+    /// Wired adapters by service name (stable across enX renumbering).
+    func refreshPorts() {
+        var res: [NetPort] = []
+        var hw = ""
+        for line in run("/usr/sbin/networksetup", ["-listallhardwareports"]).split(separator: "\n") {
+            if line.hasPrefix("Hardware Port: ") { hw = String(line.dropFirst(15)) }
+            else if line.hasPrefix("Device: "), !hw.localizedCaseInsensitiveContains("wi-fi"),
+                    !hw.localizedCaseInsensitiveContains("bluetooth"),
+                    !hw.localizedCaseInsensitiveContains("thunderbolt bridge") {
+                res.append(NetPort(name: hw, device: String(line.dropFirst(8))))
+            }
+        }
+        netPorts = res
+        if port.isEmpty, let usb = res.first(where: { $0.name.contains("USB") }) { port = usb.name }
+        routeIface = run("/sbin/route", ["-n", "get", host]).split(separator: "\n")
+            .first { $0.contains("interface:") }?
+            .split(separator: ":").last.map { $0.trimmingCharacters(in: .whitespaces) } ?? ""
+    }
+
+    /// Narrow mask on the chosen adapter so the SSP's address routes out of it
+    /// even when Wi-Fi uses the same /24. SSP addressing is untouched.
+    func applyPort() async {
+        let o = host.split(separator: ".").compactMap { Int($0) }
+        guard o.count == 4, !port.isEmpty else { note("port: bad host or no adapter"); return }
+        let d = o[3]
+        let (base, mask) = (d % 4 == 0 || d % 4 == 3) ? (d & ~7, "255.255.255.248")
+                                                      : (d & ~3, "255.255.255.252")
+        let mac = base + 1 == d ? base + 2 : base + 1
+        let ip = "\(o[0]).\(o[1]).\(o[2]).\(mac)"
+        let cmd = "/usr/sbin/networksetup -setmanual '\(port)' \(ip) \(mask)"
+        let out = run("/usr/bin/osascript",
+                      ["-e", "do shell script \"\(cmd)\" with administrator privileges"])
+        note("\(cmd)  ->  \(out.isEmpty ? "ok" : out)")
+        try? await Task.sleep(for: .seconds(2))
+        refreshPorts()
+        await ping()
+    }
 
     func ping() async {
         busy = true; defer { busy = false }
