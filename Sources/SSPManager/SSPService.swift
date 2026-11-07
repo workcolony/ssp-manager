@@ -83,6 +83,31 @@ final class SSPService {
         return p.hasPrefix("/") ? p : "\(root)/\(p)"
     }
 
+    // ---- mac junk -----------------------------------------------------------
+    // AppleDouble (._x), Finder and Spotlight metadata must never reach the SSP:
+    // they double FAT entries and confuse SYNTHOR's file lists.
+    static let junkNames = ["._*", ".DS_Store", ".Spotlight-V100", ".fseventsd", ".Trashes",
+                            ".TemporaryItems", ".apdisk"]
+    static var junkExcludes: String { junkNames.map { "--exclude='\($0)'" }.joined(separator: " ") }
+    static func isMacJunk(_ name: String) -> Bool {
+        name.hasPrefix("._") || junkNames.contains(name)
+    }
+
+    /// Count AppleDouble/.DS_Store files under the card root (read-only).
+    func countMacJunk() async -> Int {
+        let (_, out, _) = await sh("find \(q(root)) \\( -name '._*' -o -name .DS_Store \\) -type f | wc -l")
+        return Int(out.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
+    }
+
+    /// Delete AppleDouble/.DS_Store files under the card root.
+    func cleanMacJunk() async -> Int {
+        busy = true; defer { busy = false }
+        let n = await countMacJunk()
+        _ = await sh("find \(q(root)) \\( -name '._*' -o -name .DS_Store \\) -type f -delete; sync")
+        note("removed \(n) mac junk file(s)")
+        return n
+    }
+
     // ---- device -------------------------------------------------------------
 
     private func run(_ exe: String, _ args: [String]) -> String {
@@ -189,10 +214,11 @@ final class SSPService {
         var isDir: ObjCBool = false
         if FileManager.default.fileExists(atPath: local.path, isDirectory: &isDir), isDir.boolValue {
             let (rc, _, e) = await shell(
-                "COPYFILE_DISABLE=1 tar cf - -C '\(local.path)' . | /usr/bin/ssh -o BatchMode=yes root@\(host) \"mkdir -p '\(dst)/\(local.lastPathComponent)' && tar xf - -C '\(dst)/\(local.lastPathComponent)' && sync\"")
+                "COPYFILE_DISABLE=1 tar cf - \(Self.junkExcludes) -C '\(local.path)' . | /usr/bin/ssh -o BatchMode=yes root@\(host) \"mkdir -p '\(dst)/\(local.lastPathComponent)' && tar xf - -C '\(dst)/\(local.lastPathComponent)' && sync\"")
             if rc != 0 { note(e) }
             return rc == 0
         }
+        if Self.isMacJunk(local.lastPathComponent) { note("skipped mac junk \(local.lastPathComponent)"); return true }
         _ = await sh("mkdir -p \(q(dst))")
         let (rc, _, e) = await scp(local.path, to: dst + "/" + local.lastPathComponent)
         if rc == 0 { _ = await sh("sync") } else { note(e) }
@@ -230,7 +256,7 @@ final class SSPService {
         FileManager.default.fileExists(atPath: local.path, isDirectory: &isDir)
         if isDir.boolValue {
             if let e = FileManager.default.enumerator(at: local, includingPropertiesForKeys: nil) {
-                for case let u as URL in e { files.append(u) }
+                for case let u as URL in e where !Self.isMacJunk(u.lastPathComponent) { files.append(u) }
             }
         } else { files = [local] }
 
@@ -278,7 +304,7 @@ final class SSPService {
         }
         let dstDir = abs(remoteDir) + "/" + local.lastPathComponent
         let (rc, _, e) = await shell(
-            "COPYFILE_DISABLE=1 tar cf - -C '\(stage.path)' . | /usr/bin/ssh -o BatchMode=yes root@\(host) \"mkdir -p '\(dstDir)' && tar xf - -C '\(dstDir)' && sync\"")
+            "COPYFILE_DISABLE=1 tar cf - \(Self.junkExcludes) -C '\(stage.path)' . | /usr/bin/ssh -o BatchMode=yes root@\(host) \"mkdir -p '\(dstDir)' && tar xf - -C '\(dstDir)' && sync\"")
         if rc != 0 { note(e); return 0 }
         note("convertUpload: \(done) file(s) -> \(dstDir)")
         return done

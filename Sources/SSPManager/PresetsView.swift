@@ -76,6 +76,8 @@ struct PresetsView: View {
 struct DeviceView: View {
     @Environment(SSPService.self) private var ssp
     @State private var disk = ""
+    @State private var junk = -1
+    @State private var confirmJunk = false
     var body: some View {
         @Bindable var s = ssp
         return VStack(alignment: .leading, spacing: 14) {
@@ -105,6 +107,16 @@ struct DeviceView: View {
                     .foregroundStyle(ok ? .green : .orange)
             }
             .onAppear { ssp.refreshPorts() }
+            HStack {
+                Text("Mac junk")
+                Text(junk < 0 ? "—" : "\(junk) ._ / .DS_Store file(s)").monospaced()
+                Button("Scan") { Task { junk = await ssp.countMacJunk() } }.disabled(!ssp.online)
+                Button("Remove…") { confirmJunk = true }.disabled(!ssp.online || junk <= 0)
+            }
+            .confirmationDialog("Delete \(junk) macOS ._ / .DS_Store files from the card?",
+                                isPresented: $confirmJunk) {
+                Button("Delete", role: .destructive) { Task { _ = await ssp.cleanMacJunk(); junk = await ssp.countMacJunk() } }
+            }
             HStack {
                 Text("Card space")
                 Text(disk.isEmpty ? "—" : disk).monospaced()
