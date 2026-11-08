@@ -190,7 +190,7 @@ struct FileBrowserView: View {
                 // must not retarget (or race) the upload.
                 let dest = path
                 Task {
-                    for u in urls { _ = await ssp.upload(local: u, remoteDir: dest) }
+                    _ = await ssp.upload(locals: urls, remoteDir: dest)
                     scheduleLoad()
                 }
             }
@@ -371,7 +371,7 @@ struct LocalPane: View {
                     let urls = sel.map { URL(fileURLWithPath: $0) }
                     Task {
                         working = "uploading → /\(dest)…"
-                        for u in urls { _ = await ssp.upload(local: u, remoteDir: dest) }
+                        _ = await ssp.upload(locals: urls, remoteDir: dest)
                         working = ""; onUploaded()
                     }
                 } label: { Label("Upload", systemImage: "arrow.up.doc") }

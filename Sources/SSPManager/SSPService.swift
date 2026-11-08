@@ -381,40 +381,105 @@ final class SSPService {
 
     /// Upload file or directory into remote dir.
     func upload(local: URL, remoteDir: String) async -> Bool {
-        pushBusy(); defer { popBusy() }
-        let dst = abs(remoteDir)
-        var isDir: ObjCBool = false
-        if FileManager.default.fileExists(atPath: local.path, isDirectory: &isDir), isDir.boolValue {
-            let remoteName = Self.fatSafeComponent(local.lastPathComponent)
-            if remoteName != local.lastPathComponent {
-                note("FAT-safe rename \(local.lastPathComponent) → \(remoteName)")
-            }
-            let script: URL
-            do { script = try fatSafeTarScript() }
-            catch { note("FAT-safe tar script: \(error)"); return false }
-            defer { try? FileManager.default.removeItem(at: script) }
+        await upload(locals: [local], remoteDir: remoteDir)
+    }
 
-            let ssh = transferSSH.joined(separator: " ")
-            let remote = dst + "/" + remoteName
-            // Stream a FAT-safe tar (arcnames rewritten) — never send `:` etc. to the card.
-            let (rc, _, e) = await shell("""
-                set -o pipefail
-                /usr/bin/python3 \(q(script.path)) \(q(local.path)) \
-                  | /usr/bin/ssh \(ssh) root@\(host) \
-                    "mkdir -p \(q(remote)) && tar xf - -C \(q(remote)) && sync"
-                """)
-            if !e.isEmpty { note(e.trimmingCharacters(in: .whitespacesAndNewlines)) }
-            if rc != 0 { note("upload failed rc=\(rc)") }
-            return rc == 0
+    /// Batch upload into remoteDir. Loose files share one `mkdir -p`, one tar
+    /// stream, and one `sync` (avoids N round-trips when dropping many yamls).
+    /// Directories still stream individually into their own remote folders.
+    func upload(locals: [URL], remoteDir: String) async -> Bool {
+        pushBusy(); defer { popBusy() }
+        guard !locals.isEmpty else { return true }
+        let dst = abs(remoteDir)
+        var files: [URL] = []
+        var ok = true
+        for local in locals {
+            var isDir: ObjCBool = false
+            if FileManager.default.fileExists(atPath: local.path, isDirectory: &isDir), isDir.boolValue {
+                if !(await uploadDirectory(local, into: dst)) { ok = false }
+            } else if Self.isMacJunk(local.lastPathComponent) {
+                note("skipped mac junk \(local.lastPathComponent)")
+            } else {
+                files.append(local)
+            }
         }
-        if Self.isMacJunk(local.lastPathComponent) { note("skipped mac junk \(local.lastPathComponent)"); return true }
+        if !files.isEmpty, !(await uploadFiles(files, into: dst)) { ok = false }
+        return ok
+    }
+
+    /// Stream a local directory as FAT-safe tar into `dst/<folderName>/`.
+    private func uploadDirectory(_ local: URL, into dst: String) async -> Bool {
         let remoteName = Self.fatSafeComponent(local.lastPathComponent)
         if remoteName != local.lastPathComponent {
             note("FAT-safe rename \(local.lastPathComponent) → \(remoteName)")
         }
-        _ = await sh("mkdir -p \(q(dst))")
-        let (rc, _, e) = await scp(local.path, to: dst + "/" + remoteName)
-        if rc == 0 { _ = await sh("sync") } else { note(e) }
+        let script: URL
+        do { script = try fatSafeTarScript() }
+        catch { note("FAT-safe tar script: \(error)"); return false }
+        defer { try? FileManager.default.removeItem(at: script) }
+
+        let ssh = transferSSH.joined(separator: " ")
+        let remote = dst + "/" + remoteName
+        let (rc, _, e) = await shell("""
+            set -o pipefail
+            /usr/bin/python3 \(q(script.path)) \(q(local.path)) \
+              | /usr/bin/ssh \(ssh) root@\(host) \
+                "mkdir -p \(q(remote)) && tar xf - -C \(q(remote)) && sync"
+            """)
+        if !e.isEmpty { note(e.trimmingCharacters(in: .whitespacesAndNewlines)) }
+        if rc != 0 { note("upload failed rc=\(rc)") }
+        return rc == 0
+    }
+
+    /// Stage loose files with FAT-safe names, then one tar|ssh into `dst`.
+    private func uploadFiles(_ files: [URL], into dst: String) async -> Bool {
+        let stage = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ssp-up-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: stage, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: stage) }
+
+        var used = Set<String>()
+        var staged = 0
+        for f in files {
+            var name = Self.fatSafeComponent(f.lastPathComponent)
+            if name != f.lastPathComponent {
+                note("FAT-safe rename \(f.lastPathComponent) → \(name)")
+            }
+            // Avoid clobbering if two locals collapse to the same FAT-safe name.
+            if used.contains(name) {
+                let base = (name as NSString).deletingPathExtension
+                let ext = (name as NSString).pathExtension
+                var n = 2
+                repeat {
+                    name = ext.isEmpty ? "\(base)-\(n)" : "\(base)-\(n).\(ext)"
+                    n += 1
+                } while used.contains(name)
+            }
+            used.insert(name)
+            do {
+                try FileManager.default.copyItem(at: f, to: stage.appendingPathComponent(name))
+                staged += 1
+            } catch {
+                note("stage \(f.lastPathComponent): \(error)")
+            }
+        }
+        guard staged > 0 else { return true }
+
+        let script: URL
+        do { script = try fatSafeTarScript() }
+        catch { note("FAT-safe tar script: \(error)"); return false }
+        defer { try? FileManager.default.removeItem(at: script) }
+
+        let ssh = transferSSH.joined(separator: " ")
+        note("upload \(staged) file(s) → \(dst)")
+        let (rc, _, e) = await shell("""
+            set -o pipefail
+            /usr/bin/python3 \(q(script.path)) \(q(stage.path)) \
+              | /usr/bin/ssh \(ssh) root@\(host) \
+                "mkdir -p \(q(dst)) && tar xf - -C \(q(dst)) && sync"
+            """)
+        if !e.isEmpty { note(e.trimmingCharacters(in: .whitespacesAndNewlines)) }
+        if rc != 0 { note("upload failed rc=\(rc)") }
         return rc == 0
     }
 
