@@ -15,9 +15,47 @@ struct FileBrowserView: View {
     @State private var newName = ""
     @State private var makingDir = false
     @State private var dirName = ""
+    @State private var moving = false
+    @State private var moveDest = "samples"
+    @State private var moveFolders: [RemoteItem] = []
 
     private func load() async {
         items = await ssp.listDir(showTrash ? ".trash" : path)
+    }
+
+    private func loadMoveFolders() async {
+        moveFolders = (await ssp.listDir(moveDest)).filter(\.isDir)
+    }
+
+    private func openMove() {
+        moveDest = path.isEmpty ? "samples" : path
+        moving = true
+        Task { await loadMoveFolders() }
+    }
+
+    /// Absolute dest for `name` under the relative moveDest path.
+    private func moveTarget(for name: String) -> String {
+        moveDest.isEmpty ? name : "\(moveDest)/\(name)"
+    }
+
+    private func canMove(_ item: RemoteItem) -> Bool {
+        let destAbs = moveDest.isEmpty ? ssp.root : "\(ssp.root)/\(moveDest)"
+        if item.path == destAbs { return false }                          // onto itself
+        if destAbs.hasPrefix(item.path + "/") { return false }            // into own child
+        let parent = (item.path as NSString).deletingLastPathComponent
+        return parent != destAbs                                         // already there
+    }
+
+    private func performMove() {
+        let targets = selItems
+        Task {
+            for s in targets where canMove(s) {
+                await ssp.move(s.path, moveTarget(for: s.name))
+            }
+            moving = false
+            sel.removeAll()
+            await load()
+        }
     }
 
     private func go(_ item: RemoteItem) {
@@ -74,6 +112,9 @@ struct FileBrowserView: View {
                     Button { if let s = selItem { renaming = true; newName = s.name } }
                         label: { Image(systemName: "pencil") }
                         .disabled(selItem == nil || showTrash).help("Rename")
+                    Button { openMove() }
+                        label: { Image(systemName: "rectangle.portrait.and.arrow.right") }
+                        .disabled(sel.isEmpty || showTrash).help("Move to folder…")
                     Button {
                         Task {
                             for s in selItems { await ssp.deleteToTrash(s.path) }
@@ -114,6 +155,10 @@ struct FileBrowserView: View {
                         }
                         if !showTrash {
                             Button("Rename") { sel = [it.id]; renaming = true; newName = it.name }
+                            Button("Move…") {
+                                sel = Set(selItems.map(\.id))
+                                openMove()
+                            }
                             Button("Delete", role: .destructive) {
                                 Task { await ssp.deleteToTrash(it.path); await load() }
                             }
@@ -152,8 +197,78 @@ struct FileBrowserView: View {
             }
             Button("Cancel", role: .cancel) {}
         }
+        .sheet(isPresented: $moving) {
+            MoveSheet(
+                count: selItems.count,
+                names: selItems.map(\.name),
+                dest: $moveDest,
+                folders: moveFolders,
+                onUp: {
+                    if let i = moveDest.lastIndex(of: "/") {
+                        moveDest = String(moveDest[..<i])
+                    } else { moveDest = "" }
+                    Task { await loadMoveFolders() }
+                },
+                onEnter: { folder in
+                    moveDest = folder.path.replacingOccurrences(of: ssp.root + "/", with: "")
+                    Task { await loadMoveFolders() }
+                },
+                onConfirm: performMove,
+                onCancel: { moving = false }
+            )
+        }
         .task { await load() }
     }
+
+/// Folder picker sheet for moving selected remote items.
+private struct MoveSheet: View {
+    let count: Int
+    let names: [String]
+    @Binding var dest: String
+    let folders: [RemoteItem]
+    var onUp: () -> Void
+    var onEnter: (RemoteItem) -> Void
+    var onConfirm: () -> Void
+    var onCancel: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Move \(count) item\(count == 1 ? "" : "s")")
+                .font(.headline)
+            Text(names.prefix(4).joined(separator: ", ")
+                 + (names.count > 4 ? "…" : ""))
+                .font(.caption).foregroundStyle(.secondary)
+                .lineLimit(2)
+
+            HStack(spacing: 6) {
+                Button(action: onUp) { Image(systemName: "arrow.up") }
+                    .disabled(dest.isEmpty)
+                Text("/" + dest)
+                    .font(.caption).lineLimit(1).truncationMode(.middle)
+                Spacer()
+            }
+
+            List(folders) { f in
+                Button { onEnter(f) } label: {
+                    Label(f.name, systemImage: "folder")
+                }
+                .buttonStyle(.plain)
+            }
+            .frame(minHeight: 220)
+            .border(Color.secondary.opacity(0.25))
+
+            HStack {
+                Spacer()
+                Button("Cancel", action: onCancel).keyboardShortcut(.cancelAction)
+                Button("Move Here", action: onConfirm)
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(count == 0)
+            }
+        }
+        .padding(16)
+        .frame(width: 420, height: 380)
+    }
+}
 
     private func iconFor(_ name: String) -> String {
         if name.hasSuffix(".wav") || name.hasSuffix(".aif") { return "waveform" }

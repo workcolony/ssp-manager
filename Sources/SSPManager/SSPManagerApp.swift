@@ -1,13 +1,32 @@
 import SwiftUI
+import AppKit
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    weak var ssp: SSPService?
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard let ssp, ssp.busy else { return .terminateNow }
+        let alert = NSAlert()
+        alert.messageText = "Operation in progress"
+        alert.informativeText =
+            "SSP Manager is transferring or writing to the card. Quitting now may leave a transfer incomplete. Quit anyway?"
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Quit")
+        alert.addButton(withTitle: "Cancel")
+        return alert.runModal() == .alertFirstButtonReturn ? .terminateNow : .terminateCancel
+    }
+}
 
 @main
 struct SSPManagerApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var ssp = SSPService()
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environment(ssp)
                 .frame(minWidth: 900, minHeight: 560)
+                .onAppear { appDelegate.ssp = ssp }
         }
         .windowStyle(.titleBar)
         .defaultSize(width: 1100, height: 680)
