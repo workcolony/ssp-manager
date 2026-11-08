@@ -18,9 +18,23 @@ struct FileBrowserView: View {
     @State private var moving = false
     @State private var moveDest = "samples"
     @State private var moveFolders: [RemoteItem] = []
+    @State private var loadTask: Task<Void, Never>?
+    @State private var loadGen = 0
 
-    private func load() async {
-        items = await ssp.listDir(showTrash ? ".trash" : path)
+    /// Kick a directory refresh; cancels any in-flight listing so a hung `ls`
+    /// on a fat sample folder can't block further navigation.
+    private func scheduleLoad() {
+        loadGen += 1
+        let gen = loadGen
+        let target = showTrash ? ".trash" : path
+        loadTask?.cancel()
+        loadTask = Task {
+            await ssp.cancelBrowse()
+            let listed = await ssp.listDir(target)
+            guard !Task.isCancelled, gen == loadGen else { return }
+            items = listed
+            sel.removeAll()
+        }
     }
 
     private func loadMoveFolders() async {
@@ -54,25 +68,25 @@ struct FileBrowserView: View {
             }
             moving = false
             sel.removeAll()
-            await load()
+            scheduleLoad()
         }
     }
 
     private func go(_ item: RemoteItem) {
         if item.isDir {
             path = item.path.replacingOccurrences(of: ssp.root + "/", with: "")
-            Task { await load() }
+            scheduleLoad()
         }
     }
 
     private func up() {
         if let i = path.lastIndex(of: "/") { path = String(path[..<i]) } else { path = "" }
-        Task { await load() }
+        scheduleLoad()
     }
 
     var body: some View {
         HSplitView {
-            LocalPane(remoteDir: path) { Task { await load() } }
+            LocalPane(remoteDir: path) { scheduleLoad() }
                 .frame(minWidth: 300)
 
             VStack(spacing: 0) {
@@ -83,7 +97,7 @@ struct FileBrowserView: View {
                     Text(showTrash ? ".trash" : "/" + path)
                         .font(.caption).lineLimit(1).truncationMode(.middle)
                     Spacer()
-                    Button { Task { await load() } }
+                    Button { scheduleLoad() }
                         label: { Image(systemName: "arrow.clockwise") }
                 }
                 .padding(.horizontal, 6).padding(.top, 6)
@@ -91,7 +105,7 @@ struct FileBrowserView: View {
                 // remote actions row
                 HStack(spacing: 8) {
                     Toggle("Trash", isOn: $showTrash).toggleStyle(.checkbox)
-                        .onChange(of: showTrash) { Task { await load() } }
+                        .onChange(of: showTrash) { scheduleLoad() }
                     Divider().frame(height: 16)
                     Button { makingDir = true } label: { Image(systemName: "folder.badge.plus") }
                         .disabled(showTrash).help("New folder")
@@ -118,12 +132,12 @@ struct FileBrowserView: View {
                     Button {
                         Task {
                             for s in selItems { await ssp.deleteToTrash(s.path) }
-                            await load()
+                            scheduleLoad()
                         }
                     } label: { Image(systemName: "trash") }
                         .disabled(sel.isEmpty || showTrash).help("Move to trash")
                     if showTrash {
-                        Button("Empty") { Task { await ssp.emptyTrash(); await load() } }
+                        Button("Empty") { Task { await ssp.emptyTrash(); scheduleLoad() } }
                     }
                     Spacer()
                 }
@@ -160,7 +174,7 @@ struct FileBrowserView: View {
                                 openMove()
                             }
                             Button("Delete", role: .destructive) {
-                                Task { await ssp.deleteToTrash(it.path); await load() }
+                                Task { await ssp.deleteToTrash(it.path); scheduleLoad() }
                             }
                         }
                     }
@@ -172,9 +186,12 @@ struct FileBrowserView: View {
         .fileImporter(isPresented: $showPicker, allowedContentTypes: [.item, .folder],
                       allowsMultipleSelection: true) { res in
             if case .success(let urls) = res {
+                // Freeze destination — navigating the remote pane mid-transfer
+                // must not retarget (or race) the upload.
+                let dest = path
                 Task {
-                    for u in urls { _ = await ssp.upload(local: u, remoteDir: path) }
-                    await load()
+                    for u in urls { _ = await ssp.upload(local: u, remoteDir: dest) }
+                    scheduleLoad()
                 }
             }
         }
@@ -183,7 +200,7 @@ struct FileBrowserView: View {
             Button("Rename") {
                 if let s = selItem {
                     let dst = s.path.replacingOccurrences(of: "/\(s.name)", with: "/\(newName)")
-                    Task { await ssp.move(s.path, dst); await load() }
+                    Task { await ssp.move(s.path, dst); scheduleLoad() }
                 }
             }
             Button("Cancel", role: .cancel) {}
@@ -192,7 +209,7 @@ struct FileBrowserView: View {
             TextField("Folder name", text: $dirName)
             Button("Create") {
                 if !dirName.isEmpty {
-                    Task { await ssp.mkdir(path.isEmpty ? dirName : "\(path)/\(dirName)"); await load() }
+                    Task { await ssp.mkdir(path.isEmpty ? dirName : "\(path)/\(dirName)"); scheduleLoad() }
                 }
             }
             Button("Cancel", role: .cancel) {}
@@ -217,7 +234,7 @@ struct FileBrowserView: View {
                 onCancel: { moving = false }
             )
         }
-        .task { await load() }
+        .task { scheduleLoad() }
     }
 
 /// Folder picker sheet for moving selected remote items.
@@ -350,22 +367,27 @@ struct LocalPane: View {
 
             HStack(spacing: 8) {
                 Button {
+                    let dest = remoteDir
+                    let urls = sel.map { URL(fileURLWithPath: $0) }
                     Task {
-                        working = "uploading…"
-                        for id in sel { _ = await ssp.upload(local: URL(fileURLWithPath: id), remoteDir: remoteDir) }
+                        working = "uploading → /\(dest)…"
+                        for u in urls { _ = await ssp.upload(local: u, remoteDir: dest) }
                         working = ""; onUploaded()
                     }
                 } label: { Label("Upload", systemImage: "arrow.up.doc") }
-                    .disabled(sel.isEmpty || !ssp.online)
+                    .disabled(sel.isEmpty || !ssp.online || !working.isEmpty)
                 Button {
+                    let dest = remoteDir
+                    let urls = sel.map { URL(fileURLWithPath: $0) }
                     Task {
-                        working = "converting…"
-                        for id in sel { _ = await ssp.convertUpload(local: URL(fileURLWithPath: id), remoteDir: remoteDir) }
+                        working = "converting → /\(dest)…"
+                        for u in urls { _ = await ssp.convertUpload(local: u, remoteDir: dest) }
                         working = ""; onUploaded()
                     }
                 } label: { Label("→WAV + Upload", systemImage: "waveform.badge.plus") }
-                    .disabled(sel.isEmpty || !ssp.online)
+                    .disabled(sel.isEmpty || !ssp.online || !working.isEmpty)
                 Text(working).font(.caption).foregroundStyle(.secondary)
+                    .lineLimit(1).truncationMode(.middle)
             }
             .padding(6)
         }

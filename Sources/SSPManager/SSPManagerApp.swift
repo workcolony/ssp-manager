@@ -94,10 +94,12 @@ struct LogView: View {
                     ForEach(Array(ssp.log.enumerated()), id: \.offset) { i, line in
                         Text(line).font(.system(.caption2, design: .monospaced))
                             .foregroundStyle(.secondary).id(i)
+                            .textSelection(.enabled)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(6)
+                .textSelection(.enabled)
             }
             .background(Color(nsColor: .textBackgroundColor).opacity(0.4))
             .onChange(of: ssp.log.count) { proxy.scrollTo(ssp.log.count - 1) }

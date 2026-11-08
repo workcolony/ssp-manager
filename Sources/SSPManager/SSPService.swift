@@ -12,10 +12,85 @@ struct RemoteItem: Identifiable, Hashable {
 
 /// SSH-backed operations against the SSP card. All UI-thread safe (@MainActor).
 /// dropbear has no sftp -> scp -O for files, tar-over-ssh for dirs.
+///
+/// All remote ssh/scp/tar|ssh calls go through ``SSPTransport`` so they never
+/// overlap — dropbear on the SSP often only allows one session, and a mid-
+/// transfer `ls` (from navigating folders) used to kill the upload.
 struct NetPort: Identifiable, Hashable {
     let name: String      // service / hardware port name, e.g. "USB 10/100/1000 LAN"
     let device: String    // current BSD name, e.g. "en8" (may change)
     var id: String { name }
+}
+
+/// Serializes Process launches that talk to the SSP (one session at a time).
+/// Explicit task chain (actors are reentrant across `await`). Browse ops can
+/// preempt a prior browse (kill its Process) so a hung `ls` doesn't freeze nav;
+/// transfers preempt browse so uploads still get the single dropbear slot.
+actor SSPTransport {
+    enum Kind { case browse, transfer }
+
+    private var chain: Task<(Int32, String, String), Never>?
+    private var active: Process?
+    private var activeKind: Kind?
+
+    func cancelBrowse() {
+        if activeKind == .browse {
+            active?.terminate()
+            active = nil
+            activeKind = nil
+        }
+    }
+
+    func run(_ exe: String, _ args: [String], kind: Kind = .transfer) async -> (Int32, String, String) {
+        // New browse replaces a wedged browse; transfers bump browse off the slot.
+        // Never terminate an in-flight transfer.
+        cancelBrowse()
+        let prior = chain
+        let task = Task<(Int32, String, String), Never> {
+            _ = await prior?.value
+            return await self.exec(exe, args, kind: kind)
+        }
+        chain = task
+        return await task.value
+    }
+
+    private func exec(_ exe: String, _ args: [String], kind: Kind) async -> (Int32, String, String) {
+        await withTaskCancellationHandler {
+            await withCheckedContinuation { (cont: CheckedContinuation<(Int32, String, String), Never>) in
+                let p = Process()
+                let out = Pipe(), err = Pipe()
+                p.executableURL = URL(fileURLWithPath: exe)
+                p.arguments = args
+                p.standardOutput = out
+                p.standardError = err
+                do {
+                    try p.run()
+                    self.active = p
+                    self.activeKind = kind
+                    p.terminationHandler = { proc in
+                        let o = String(data: out.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+                        let e = String(data: err.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+                        Task { await self.clearActive(p) }
+                        cont.resume(returning: (proc.terminationStatus, o, e))
+                    }
+                } catch {
+                    cont.resume(returning: (-1, "", "\(error)"))
+                }
+            }
+        } onCancel: {
+            // Only browse ops are cancellable mid-flight — never kill a transfer.
+            if kind == .browse {
+                Task { await self.cancelBrowse() }
+            }
+        }
+    }
+
+    private func clearActive(_ p: Process) {
+        if active === p {
+            active = nil
+            activeKind = nil
+        }
+    }
 }
 
 @MainActor @Observable
@@ -31,31 +106,121 @@ final class SSPService {
     var online = false
     var log: [String] = []
 
+    private let transport = SSPTransport()
+    private var busyDepth = 0
+
     private func note(_ s: String) { log.append(s); if log.count > 500 { log.removeFirst() } }
+
+    private func pushBusy() {
+        busyDepth += 1
+        busy = true
+    }
+    private func popBusy() {
+        busyDepth = max(0, busyDepth - 1)
+        busy = busyDepth > 0
+    }
 
     // ---- primitives ---------------------------------------------------------
 
-    @discardableResult
-    func sh(_ script: String) async -> (Int32, String, String) {
-        note("$ ssh \(script)")
-        return await Self.run("/usr/bin/ssh",
-            ["-o", "BatchMode=yes", "-o", "ConnectTimeout=5",
-             "root@\(host)", script])
+    /// Short keepalives for browse/`ls` only — kill wedged listings.
+    /// Transfers omit keepalives: a long FAT `sync` with no SSH traffic used to
+    /// trip ServerAliveInterval=3 and drop the connection mid-tree.
+    private var browseSSH: [String] {
+        ["-o", "BatchMode=yes", "-o", "ConnectTimeout=5",
+         "-o", "ServerAliveInterval=5", "-o", "ServerAliveCountMax=3"]
+    }
+    private var transferSSH: [String] {
+        ["-o", "BatchMode=yes", "-o", "ConnectTimeout=5",
+         "-o", "ServerAliveInterval=0"]
     }
 
-    /// Run a local shell pipeline (for tar streams).
+    /// Interrupt a hung directory listing so navigation can continue.
+    func cancelBrowse() async { await transport.cancelBrowse() }
+
+    @discardableResult
+    func sh(_ script: String, browse: Bool = false) async -> (Int32, String, String) {
+        note("$ ssh \(script)")
+        return await transport.run("/usr/bin/ssh",
+            (browse ? browseSSH : transferSSH) + ["root@\(host)", script],
+            kind: browse ? .browse : .transfer)
+    }
+
+    /// Run a local shell pipeline (for tar streams). Goes through the transport
+    /// when the pipeline includes ssh to the SSP so it can't race an scp.
     @discardableResult
     func shell(_ cmd: String) async -> (Int32, String, String) {
         note("$ \(cmd)")
-        return await Self.run("/bin/bash", ["-c", cmd])
+        return await transport.run("/bin/bash", ["-c", cmd], kind: .transfer)
     }
 
     func scp(_ local: String, to remote: String) async -> (Int32, String, String) {
         note("$ scp -O \(local) -> \(remote)")
-        return await Self.run("/usr/bin/scp",
-            ["-O", "-q", local, "root@\(host):\(remote)"])
+        return await transport.run("/usr/bin/scp",
+            ["-O", "-q"] + transferSSH + [local, "root@\(host):\(remote)"],
+            kind: .transfer)
     }
 
+    // FAT/VFAT rejects these in a single path component — busybox tar then
+    // errors (`Invalid argument`) and aborts mid-library (`tar: Write error`).
+    private static let fatIllegal = CharacterSet(charactersIn: ":*?\"<>|\\")
+
+    static func fatSafeComponent(_ name: String) -> String {
+        var s = ""
+        for ch in name {
+            if ch.unicodeScalars.contains(where: { fatIllegal.contains($0) }) { s.append("-") }
+            else { s.append(ch) }
+        }
+        while s.hasSuffix(".") || s.hasSuffix(" ") { s.removeLast() }
+        return s.isEmpty ? "_" : s
+    }
+
+    /// Stream a directory as a tar on stdout, rewriting arcnames so every
+    /// path component is FAT-safe (`:` → `-`, etc.). Uses python3 (macOS).
+    private static let fatSafeTarPy = #"""
+    import tarfile, os, sys
+    ILLEGAL = set(':*?"<>|\\')
+    JUNK = {'.DS_Store', '.Spotlight-V100', '.fseventsd', '.Trashes',
+            '.TemporaryItems', '.apdisk'}
+    def safe_comp(n: str) -> str:
+        s = ''.join('-' if c in ILLEGAL else c for c in n).rstrip('. ')
+        return s or '_'
+    def safe_rel(rel: str) -> str:
+        parts = [p for p in rel.replace('\\', '/').split('/') if p and p != '.']
+        return '/'.join(safe_comp(p) for p in parts)
+    def is_junk(name: str) -> bool:
+        return name.startswith('._') or name in JUNK
+    root = sys.argv[1]
+    rewrites = 0
+    files = 0
+    with tarfile.open(fileobj=sys.stdout.buffer, mode='w|') as tar:
+        for dirpath, dirnames, filenames in os.walk(root):
+            dirnames[:] = [d for d in dirnames if not is_junk(d)]
+            rel_dir = os.path.relpath(dirpath, root)
+            if rel_dir == '.':
+                rel_dir = ''
+            for fn in filenames:
+                if is_junk(fn):
+                    continue
+                full = os.path.join(dirpath, fn)
+                if not os.path.isfile(full):
+                    continue
+                rel = fn if not rel_dir else os.path.join(rel_dir, fn)
+                arc = safe_rel(rel)
+                if arc != rel.replace('\\', '/'):
+                    rewrites += 1
+                tar.add(full, arcname=arc, recursive=False)
+                files += 1
+    print(f'FAT-safe tar: {files} files, {rewrites} path(s) renamed', file=sys.stderr)
+    """#
+
+    private func fatSafeTarScript() throws -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ssp-fat-tar-\(UUID().uuidString).py")
+        try Self.fatSafeTarPy.write(to: url, atomically: true, encoding: .utf8)
+        return url
+    }
+
+    /// Local-only Process (afconvert, etc.) — may run concurrent with SSP I/O.
     static func run(_ exe: String, _ args: [String]) async -> (Int32, String, String) {
         await withCheckedContinuation { cont in
             let p = Process()
@@ -101,7 +266,7 @@ final class SSPService {
 
     /// Delete AppleDouble/.DS_Store files under the card root.
     func cleanMacJunk() async -> Int {
-        busy = true; defer { busy = false }
+        pushBusy(); defer { popBusy() }
         let n = await countMacJunk()
         _ = await sh("find \(q(root)) \\( -name '._*' -o -name .DS_Store \\) -type f -delete; sync")
         note("removed \(n) mac junk file(s)")
@@ -158,76 +323,104 @@ final class SSPService {
     }
 
     func ping() async {
-        busy = true; defer { busy = false }
+        pushBusy(); defer { popBusy() }
         let (rc, out, _) = await sh("echo PONG")
         online = rc == 0 && out.contains("PONG")
     }
 
     func df() async -> String {
-        busy = true; defer { busy = false }
+        pushBusy(); defer { popBusy() }
         let (_, out, _) = await sh("df -h \(q(root)) | tail -1")
         return out.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     func restartSynthor() async {
-        busy = true; defer { busy = false }
+        pushBusy(); defer { popBusy() }
         let (_, out, _) = await sh("/etc/init.d/S90synthor restart")
         note(out)
     }
 
     // ---- file manager -------------------------------------------------------
 
+    /// Fast name listing (`ls -1Ap`) — avoids `ls -l` stat-storms on fat
+    /// sample dirs that hang dropbear for minutes.
     func listDir(_ path: String) async -> [RemoteItem] {
-        busy = true; defer { busy = false }
+        pushBusy(); defer { popBusy() }
         let p = abs(path)
-        let (rc, out, _) = await sh("ls -lA \(q(p))")
-        guard rc == 0 else { return [] }
+        // -1 one per line, -A almost-all, -p dirs get trailing /
+        let (rc, out, err) = await sh("ls -1Ap \(q(p)) 2>/dev/null | head -n 4000", browse: true)
+        guard rc == 0 else {
+            if !err.isEmpty { note("listDir \(p): \(err)") }
+            return []
+        }
         var items: [RemoteItem] = []
-        for line in out.split(separator: "\n") {
-            let f = line.split(separator: " ", omittingEmptySubsequences: true)
-            guard f.count >= 9, f[0].hasPrefix("d") || f[0].hasPrefix("-") || f[0].hasPrefix("l") || f[0].hasPrefix("r") else { continue }
-            let name = f[8...].joined(separator: " ")
-            guard name != "." && name != ".." && !name.hasPrefix(".") else { continue }
+        for line in out.split(separator: "\n", omittingEmptySubsequences: true) {
+            var name = String(line)
+            let isDir = name.hasSuffix("/")
+            if isDir { name.removeLast() }
+            guard !name.isEmpty, name != ".", name != "..", !Self.isMacJunk(name),
+                  !name.hasPrefix(".") else { continue }
             items.append(RemoteItem(name: name, path: "\(p)/\(name)",
-                                    isDir: f[0].hasPrefix("d"), size: String(f[4])))
+                                    isDir: isDir, size: isDir ? "—" : ""))
         }
         return items.sorted { $0.isDir == $1.isDir ? $0.name < $1.name : $0.isDir }
     }
 
-    func mkdir(_ path: String) async { busy = true; defer { busy = false }; _ = await sh("mkdir -p \(q(abs(path)))") }
-    func move(_ src: String, _ dst: String) async { busy = true; defer { busy = false }; _ = await sh("mv \(q(abs(src))) \(q(abs(dst)))") }
+    func mkdir(_ path: String) async { pushBusy(); defer { popBusy() }; _ = await sh("mkdir -p \(q(abs(path)))") }
+    func move(_ src: String, _ dst: String) async { pushBusy(); defer { popBusy() }; _ = await sh("mv \(q(abs(src))) \(q(abs(dst)))") }
 
     /// Safe delete: move to /media/BOOT/.trash
     func deleteToTrash(_ path: String) async {
-        busy = true; defer { busy = false }
+        pushBusy(); defer { popBusy() }
         _ = await sh("mkdir -p \(q(root))/.trash && mv \(q(abs(path))) \(q(root))/.trash/")
     }
     func emptyTrash() async {
-        busy = true; defer { busy = false }
+        pushBusy(); defer { popBusy() }
         _ = await sh("rm -rf \(q(root))/.trash && mkdir -p \(q(root))/.trash && sync")
     }
 
     /// Upload file or directory into remote dir.
     func upload(local: URL, remoteDir: String) async -> Bool {
-        busy = true; defer { busy = false }
+        pushBusy(); defer { popBusy() }
         let dst = abs(remoteDir)
         var isDir: ObjCBool = false
         if FileManager.default.fileExists(atPath: local.path, isDirectory: &isDir), isDir.boolValue {
-            let (rc, _, e) = await shell(
-                "COPYFILE_DISABLE=1 tar cf - \(Self.junkExcludes) -C '\(local.path)' . | /usr/bin/ssh -o BatchMode=yes root@\(host) \"mkdir -p '\(dst)/\(local.lastPathComponent)' && tar xf - -C '\(dst)/\(local.lastPathComponent)' && sync\"")
-            if rc != 0 { note(e) }
+            let remoteName = Self.fatSafeComponent(local.lastPathComponent)
+            if remoteName != local.lastPathComponent {
+                note("FAT-safe rename \(local.lastPathComponent) → \(remoteName)")
+            }
+            let script: URL
+            do { script = try fatSafeTarScript() }
+            catch { note("FAT-safe tar script: \(error)"); return false }
+            defer { try? FileManager.default.removeItem(at: script) }
+
+            let ssh = transferSSH.joined(separator: " ")
+            let remote = dst + "/" + remoteName
+            // Stream a FAT-safe tar (arcnames rewritten) — never send `:` etc. to the card.
+            let (rc, _, e) = await shell("""
+                set -o pipefail
+                /usr/bin/python3 \(q(script.path)) \(q(local.path)) \
+                  | /usr/bin/ssh \(ssh) root@\(host) \
+                    "mkdir -p \(q(remote)) && tar xf - -C \(q(remote)) && sync"
+                """)
+            if !e.isEmpty { note(e.trimmingCharacters(in: .whitespacesAndNewlines)) }
+            if rc != 0 { note("upload failed rc=\(rc)") }
             return rc == 0
         }
         if Self.isMacJunk(local.lastPathComponent) { note("skipped mac junk \(local.lastPathComponent)"); return true }
+        let remoteName = Self.fatSafeComponent(local.lastPathComponent)
+        if remoteName != local.lastPathComponent {
+            note("FAT-safe rename \(local.lastPathComponent) → \(remoteName)")
+        }
         _ = await sh("mkdir -p \(q(dst))")
-        let (rc, _, e) = await scp(local.path, to: dst + "/" + local.lastPathComponent)
+        let (rc, _, e) = await scp(local.path, to: dst + "/" + remoteName)
         if rc == 0 { _ = await sh("sync") } else { note(e) }
         return rc == 0
     }
 
     /// Download remote file/dir to local dir.
     func download(remotePath: String, localDir: URL) async -> Bool {
-        busy = true; defer { busy = false }
+        pushBusy(); defer { popBusy() }
         let r = abs(remotePath)
         let (rc, out, _) = await sh("test -d \(q(r)) && echo DIR || echo FILE")
         let destDir = localDir.appendingPathComponent(r.split(separator: "/").last.map(String.init) ?? "dl")
@@ -238,9 +431,10 @@ final class SSPService {
             if rc2 != 0 { note(e) }
             return rc2 == 0
         }
-        let (rc2, _, e) = await Self.run("/usr/bin/scp",
-            ["-O", "-q", "root@\(host):\(r)", destDir.path + "/"])
         note("$ scp -O \(r) -> \(destDir.path)")
+        let (rc2, _, e) = await transport.run("/usr/bin/scp",
+            ["-O", "-q"] + transferSSH + ["root@\(host):\(r)", destDir.path + "/"],
+            kind: .transfer)
         if rc2 != 0 { note(e) }
         return rc2 == 0
     }
@@ -249,7 +443,7 @@ final class SSPService {
     /// (afconvert), then upload wav + renamed sidecars into remoteDir.
     /// Non-audio files are uploaded unchanged. Returns count converted/uploaded.
     func convertUpload(local: URL, remoteDir: String) async -> Int {
-        busy = true; defer { busy = false }
+        pushBusy(); defer { popBusy() }
         let audioExt: Set<String> = ["aif", "aiff", "aifc", "flac", "mp3", "m4a", "ogg"]
         var files: [URL] = []
         var isDir: ObjCBool = false
@@ -302,10 +496,21 @@ final class SSPService {
             }
             done += 1
         }
-        let dstDir = abs(remoteDir) + "/" + local.lastPathComponent
-        let (rc, _, e) = await shell(
-            "COPYFILE_DISABLE=1 tar cf - \(Self.junkExcludes) -C '\(stage.path)' . | /usr/bin/ssh -o BatchMode=yes root@\(host) \"mkdir -p '\(dstDir)' && tar xf - -C '\(dstDir)' && sync\"")
-        if rc != 0 { note(e); return 0 }
+        let remoteName = Self.fatSafeComponent(local.lastPathComponent)
+        let dstDir = abs(remoteDir) + "/" + remoteName
+        let script: URL
+        do { script = try fatSafeTarScript() }
+        catch { note("FAT-safe tar script: \(error)"); return 0 }
+        defer { try? FileManager.default.removeItem(at: script) }
+        let ssh = transferSSH.joined(separator: " ")
+        let (rc, _, e) = await shell("""
+            set -o pipefail
+            /usr/bin/python3 \(q(script.path)) \(q(stage.path)) \
+              | /usr/bin/ssh \(ssh) root@\(host) \
+                "mkdir -p \(q(dstDir)) && tar xf - -C \(q(dstDir)) && sync"
+            """)
+        if !e.isEmpty { note(e.trimmingCharacters(in: .whitespacesAndNewlines)) }
+        if rc != 0 { note("convertUpload failed rc=\(rc)"); return 0 }
         note("convertUpload: \(done) file(s) -> \(dstDir)")
         return done
     }
@@ -317,7 +522,7 @@ final class SSPService {
     }
 
     func installPlugin(_ local: URL) async -> Bool {
-        busy = true; defer { busy = false }
+        pushBusy(); defer { popBusy() }
         let (rc, _, e) = await scp(local.path, to: "\(root)/plugins/\(local.lastPathComponent)")
         if rc != 0 { note(e); return false }
         _ = await sh("sync")
@@ -354,7 +559,7 @@ final class SSPService {
     /// Backup presets to a local folder, renamed "NNN - <name>.pbp" so Finder
     /// shows real preset names. Remote staging + single tar stream.
     func backupPresets(to localDir: URL) async -> Bool {
-        busy = true; defer { busy = false }
+        pushBusy(); defer { popBusy() }
         try? FileManager.default.createDirectory(at: localDir, withIntermediateDirectories: true)
         let (rc, _, e) = await shell(
             "/usr/bin/ssh -o BatchMode=yes root@\(host) \"COPYFILE_DISABLE=1 tar cf - -C '\(root)/presets' .\" | tar xf - -C '\(localDir.path)'")
@@ -374,7 +579,7 @@ final class SSPService {
     /// Accepts "NNN - name.pbp" archives — the leading number becomes the
     /// slot on-card (restored as NNN.pbp).
     func pushPreset(_ local: URL) async -> Bool {
-        busy = true; defer { busy = false }
+        pushBusy(); defer { popBusy() }
         let stamp = ISO8601DateFormatter().string(from: Date())
             .replacingOccurrences(of: ":", with: "-")
         _ = await sh("cp -a \(q(root))/presets \(q(root))/presets.bak-\(stamp) 2>/dev/null || true")

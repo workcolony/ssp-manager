@@ -19,6 +19,10 @@ plugins, presets and sample conversion without pulling the SD card.
 - Left: your Mac's filesystem (starts in `~/Music`, single-click folders to navigate)
 - Right: the SSP's SD card (`/media/BOOT`, default `samples/`)
 - Navigate, mkdir, rename, upload, download, multi-select
+- Transfers keep going if you browse another folder mid-upload (SSP dropbear
+  only handles one SSH session — browse/list waits in line instead of aborting)
+- Folder uploads rewrite FAT-illegal path characters (`:` `*` `?` etc. → `-`)
+  so libraries like `60:120bpm` kits don't make busybox tar error out mid-tree
 - Delete moves files to `.trash` on the card first — no journaled filesystem,
   so nothing is lost by accident
 - **Convert on upload**: `→WAV + Upload` transcodes `.aif/.flac/.mp3/.m4a/.ogg`
