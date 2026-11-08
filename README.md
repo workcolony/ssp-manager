@@ -10,7 +10,7 @@ plugins, presets and sample conversion without pulling the SD card.
 | | |
 |---|---|
 | ![File browser](Screenshots/files.png) | ![Converting](Screenshots/converting.png) |
-| ![Plugins](Screenshots/plugins.png) | ![Presets](Screenshots/presets.png) |
+| ![Plugins Catalog](Screenshots/plugins-catalog.png) | ![Presets](Screenshots/presets.png) |
 
 ## Features
 
