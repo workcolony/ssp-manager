@@ -10,7 +10,8 @@ plugins, presets and sample conversion without pulling the SD card.
 | | |
 |---|---|
 | ![File browser](Screenshots/files.png) | ![Converting](Screenshots/converting.png) |
-| ![Plugins Catalog](Screenshots/plugins-catalog.png) | ![Presets](Screenshots/presets.png) |
+| ![Plugins Catalog](Screenshots/plugins-catalog.png) | ![Plugins Install](Screenshots/plugins-install.png) |
+| ![Presets](Screenshots/presets.png) | |
 
 ## Features
 
@@ -34,10 +35,13 @@ plugins, presets and sample conversion without pulling the SD card.
 ### Plugins
 
 - **Catalog** tab — searchable cheat sheet for short picker codes (card + factory),
-  with author/kind filters, on-card status, and **Open docs** links (GitHub / wiki).
-  Catalog data lives in `PluginCatalog.json` (SRDP credited to BENDYmusic).
-- **Install** tab — inventory of `.so` modules on the card vs a local staging folder;
-  select + install, then restart SYNTHOR (plugins only scan at startup)
+  with author/kind filters, on-card status (**yes** / **disabled** / **no** /
+  **factory**), and **Open docs** links (GitHub / wiki). Catalog data lives in
+  `PluginCatalog.json` (BENDYmusic, Technobear, shakfu, Handsonicsuki, …).
+- **Install** tab — card vs local staging with **name** and **author** columns;
+  install, **disable / enable**, and **remove** (→ `.trash`). Disable moves
+  `.so` files to `plugins-disabled/` so SYNTHOR won’t load them; enable moves
+  them back. Restart SYNTHOR after changes (plugins only scan at startup).
 - AppleDouble `._*` junk from macOS copies is filtered and avoided on upload
 
 ### Presets

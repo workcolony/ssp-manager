@@ -25,6 +25,20 @@ struct CatalogPlugin: Identifiable, Hashable, Codable {
 enum PluginCatalog {
     static let all: [CatalogPlugin] = load()
 
+    /// Filename (e.g. `srdp.so`) → catalog entry. Case-insensitive.
+    private static let byFile: [String: CatalogPlugin] = {
+        var map: [String: CatalogPlugin] = [:]
+        for p in all {
+            guard let f = p.file, !f.isEmpty else { continue }
+            map[f.lowercased()] = p
+        }
+        return map
+    }()
+
+    static func forFile(_ filename: String) -> CatalogPlugin? {
+        byFile[filename.lowercased()]
+    }
+
     static var authors: [String] {
         Array(Set(all.map(\.author))).sorted()
     }

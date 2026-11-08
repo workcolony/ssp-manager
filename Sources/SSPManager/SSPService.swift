@@ -517,16 +517,84 @@ final class SSPService {
 
     // ---- plugins ------------------------------------------------------------
 
+    /// Active modules loaded by SYNTHOR at startup (`plugins/*.so`).
     func listPlugins() async -> [RemoteItem] {
         (await listDir("plugins")).filter { $0.name.hasSuffix(".so") }
     }
 
+    /// Modules kept on the card but not scanned (`plugins-disabled/*.so`).
+    func listDisabledPlugins() async -> [RemoteItem] {
+        _ = await sh("mkdir -p \(q(root))/plugins-disabled")
+        return (await listDir("plugins-disabled")).filter { $0.name.hasSuffix(".so") }
+    }
+
     func installPlugin(_ local: URL) async -> Bool {
         pushBusy(); defer { popBusy() }
-        let (rc, _, e) = await scp(local.path, to: "\(root)/plugins/\(local.lastPathComponent)")
+        let name = local.lastPathComponent
+        let (rc, _, e) = await scp(local.path, to: "\(root)/plugins/\(name)")
         if rc != 0 { note(e); return false }
-        _ = await sh("sync")
+        // Installing wins over a disabled copy of the same name.
+        _ = await sh("rm -f \(q("\(root)/plugins-disabled/\(name)")); sync")
+        note("installed \(name)")
         return true
+    }
+
+    /// Move active plugin out of SYNTHOR's scan path.
+    func disablePlugin(_ name: String) async -> Bool {
+        pushBusy(); defer { popBusy() }
+        guard Self.isPluginFilename(name) else { return false }
+        let src = "\(root)/plugins/\(name)"
+        let dst = "\(root)/plugins-disabled/\(name)"
+        let (rc, _, e) = await sh("""
+            mkdir -p \(q("\(root)/plugins-disabled")) && \
+            test -f \(q(src)) && mv \(q(src)) \(q(dst)) && sync
+            """)
+        if rc != 0 { note(e.isEmpty ? "disable failed: \(name)" : e); return false }
+        note("disabled \(name)")
+        return true
+    }
+
+    /// Move disabled plugin back into `plugins/` for the next SYNTHOR scan.
+    func enablePlugin(_ name: String) async -> Bool {
+        pushBusy(); defer { popBusy() }
+        guard Self.isPluginFilename(name) else { return false }
+        let src = "\(root)/plugins-disabled/\(name)"
+        let dst = "\(root)/plugins/\(name)"
+        let (rc, _, e) = await sh("""
+            test -f \(q(src)) && ! test -e \(q(dst)) && \
+            mv \(q(src)) \(q(dst)) && sync
+            """)
+        if rc != 0 { note(e.isEmpty ? "enable failed: \(name)" : e); return false }
+        note("enabled \(name)")
+        return true
+    }
+
+    /// Trash an active or disabled plugin (recoverable via Files → .trash).
+    func removePlugin(_ name: String) async -> Bool {
+        pushBusy(); defer { popBusy() }
+        guard Self.isPluginFilename(name) else { return false }
+        let active = "\(root)/plugins/\(name)"
+        let disabled = "\(root)/plugins-disabled/\(name)"
+        let trash = "\(root)/.trash"
+        let (rc, _, e) = await sh("""
+            mkdir -p \(q(trash))
+            if test -f \(q(active)); then mv \(q(active)) \(q(trash))/
+            elif test -f \(q(disabled)); then mv \(q(disabled)) \(q(trash))/
+            else exit 1
+            fi
+            sync
+            """)
+        if rc != 0 { note(e.isEmpty ? "remove failed: \(name)" : e); return false }
+        note("removed \(name) → .trash")
+        return true
+    }
+
+    private static func isPluginFilename(_ name: String) -> Bool {
+        name.hasSuffix(".so")
+            && !name.isEmpty
+            && !name.contains("/")
+            && !name.contains("\0")
+            && name != "." && name != ".."
     }
 
     // ---- presets ------------------------------------------------------------

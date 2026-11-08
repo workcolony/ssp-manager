@@ -1,162 +1,31 @@
 [
   {
-    "code": "SRDP",
-    "file": "srdp.so",
-    "name": "Serendipity",
-    "summary": "3 decks (A/B tape + S synced), Butter sidecars, glide/FX, master bus",
-    "author": "BENDYmusic",
-    "kind": "sampler",
-    "docsURL": "https://github.com/workcolony/serendipity-ssp",
+    "code": "ALDA",
+    "file": "alda.so",
+    "name": "Alda",
+    "summary": "Alda music-notation sequencer \u2192 gates / pitch CV / MIDI (no audio)",
+    "author": "shakfu",
+    "kind": "seq",
+    "docsURL": "https://github.com/shakfu/ssp",
     "source": "card"
   },
   {
-    "code": "GRID",
-    "file": "GRID.so",
-    "name": "GRID",
-    "summary": "8-channel sample player (BitBox / Elektron-style setup)",
-    "author": "kuttor",
-    "kind": "sampler",
-    "docsURL": "https://github.com/kuttor/Percussa-SSP--GRID",
-    "source": "card"
-  },
-  {
-    "code": "QVCA",
-    "file": "qvca.so",
-    "name": "Quad VCA",
-    "summary": "SDK example — 4 VCAs (also listed as factory demo)",
+    "code": "ARP",
+    "name": "Arpeggiator",
+    "summary": "Arpeggiator",
     "author": "Percussa",
-    "kind": "mix",
+    "kind": "seq",
     "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
-    "source": "card"
+    "source": "factory"
   },
   {
-    "code": "PLTS",
-    "file": "plts.so",
-    "name": "Plaits",
-    "summary": "Mutable Instruments Plaits macro-oscillator port",
-    "author": "Technobear",
-    "kind": "synth",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
-    "source": "card"
-  },
-  {
-    "code": "RNGS",
-    "file": "rngs.so",
-    "name": "Rings",
-    "summary": "Mutable Instruments Rings resonator port",
-    "author": "Technobear",
-    "kind": "synth",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
-    "source": "card"
-  },
-  {
-    "code": "DRUM",
-    "file": "drum.so",
-    "name": "Drum",
-    "summary": "Synthesized drum kit — quick percussion voices",
-    "author": "Technobear",
-    "kind": "synth",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
-    "source": "card"
-  },
-  {
-    "code": "HARM",
-    "file": "harm.so",
-    "name": "Harmonic",
-    "summary": "16-band harmonic oscillator",
-    "author": "Technobear",
-    "kind": "synth",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
-    "source": "card"
-  },
-  {
-    "code": "CLDS",
-    "file": "clds.so",
-    "name": "Clouds",
-    "summary": "Mutable Instruments Clouds granular / texture port",
-    "author": "Technobear",
+    "code": "ATGL",
+    "file": "ATGL.so",
+    "name": "Auto Glitch",
+    "summary": "Clocked auto-glitch / buffer texture (48 kHz)",
+    "author": "Handsonicsuki",
     "kind": "fx",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
-    "source": "card"
-  },
-  {
-    "code": "SRVB",
-    "file": "srvb.so",
-    "name": "Reverb",
-    "summary": "Simple reverb",
-    "author": "Technobear",
-    "kind": "fx",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
-    "source": "card"
-  },
-  {
-    "code": "LDRF",
-    "file": "ldrf.so",
-    "name": "Ladder Filter",
-    "summary": "Quad ladder filter",
-    "author": "Technobear",
-    "kind": "fx",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
-    "source": "card"
-  },
-  {
-    "code": "DLYD",
-    "file": "dlyd.so",
-    "name": "Delay",
-    "summary": "Multi-tap delay",
-    "author": "Technobear",
-    "kind": "fx",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
-    "source": "card"
-  },
-  {
-    "code": "LOOP",
-    "file": "loop.so",
-    "name": "Looper",
-    "summary": "Simple 4-track looper",
-    "author": "Technobear",
-    "kind": "fx",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
-    "source": "card"
-  },
-  {
-    "code": "GRA4",
-    "file": "gra4.so",
-    "name": "Granulator",
-    "summary": "4-track granulator",
-    "author": "Technobear",
-    "kind": "fx",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
-    "source": "card"
-  },
-  {
-    "code": "COMP",
-    "file": "comp.so",
-    "name": "Compressor",
-    "summary": "Stereo compressor with sidechain",
-    "author": "Technobear",
-    "kind": "fx",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
-    "source": "card"
-  },
-  {
-    "code": "SFLT",
-    "file": "sflt.so",
-    "name": "Spectral Filter",
-    "summary": "Bin-based spectral filter (RNBO)",
-    "author": "Technobear",
-    "kind": "fx",
-    "docsURL": "https://github.com/TheTechnobear/SSP",
-    "source": "card"
-  },
-  {
-    "code": "SFFT",
-    "file": "sfft.so",
-    "name": "Spectral FFT",
-    "summary": "Spectral FFT processor — pitch/gain bins (RNBO)",
-    "author": "Technobear",
-    "kind": "fx",
-    "docsURL": "https://github.com/TheTechnobear/SSP",
+    "docsURL": "https://forum.percussa.com/t/handsonicsuki-s-test-modules/1616",
     "source": "card"
   },
   {
@@ -170,83 +39,101 @@
     "source": "card"
   },
   {
-    "code": "MMX4",
-    "file": "mmx4.so",
-    "name": "Matrix Mixer",
-    "summary": "4× stereo in → 4× stereo out matrix, CV controllable",
+    "code": "BARD",
+    "file": "bard.so",
+    "name": "Bard",
+    "summary": "Dual spoken-word / audiobook player with bookmarks",
+    "author": "shakfu",
+    "kind": "sampler",
+    "docsURL": "https://github.com/shakfu/ssp",
+    "source": "card"
+  },
+  {
+    "code": "BCR",
+    "name": "Bitcrusher",
+    "summary": "Bit crusher",
+    "author": "Percussa",
+    "kind": "fx",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
+    "source": "factory"
+  },
+  {
+    "code": "BERP",
+    "file": "BeRp.so",
+    "name": "Beat Repeat",
+    "summary": "Clocked beat repeat while gate is high (48 kHz)",
+    "author": "Handsonicsuki",
+    "kind": "fx",
+    "docsURL": "https://forum.percussa.com/t/handsonicsuki-s-test-modules/1616",
+    "source": "card"
+  },
+  {
+    "code": "BRKS",
+    "file": "brks.so",
+    "name": "Breaks",
+    "summary": "Zack Scholl _core breakbeat slicer + random FX",
+    "author": "shakfu",
+    "kind": "sampler",
+    "docsURL": "https://github.com/shakfu/ssp",
+    "source": "card"
+  },
+  {
+    "code": "BUS",
+    "name": "Bus",
+    "summary": "Internal audio/CV bus",
+    "author": "Percussa",
+    "kind": "io",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
+    "source": "factory"
+  },
+  {
+    "code": "CART",
+    "file": "cart.so",
+    "name": "Cartesian Seq",
+    "summary": "Cartesian sequencer",
     "author": "Technobear",
-    "kind": "mix",
+    "kind": "seq",
     "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
     "source": "card"
   },
   {
-    "code": "MSW8",
-    "file": "msw8.so",
-    "name": "Switch Matrix",
-    "summary": "8 in / 8 out switch matrix",
+    "code": "CHRS",
+    "file": "chrs.so",
+    "name": "Chorus",
+    "summary": "Stereo chorus (Faust DSP from sk-engines)",
+    "author": "shakfu",
+    "kind": "fx",
+    "docsURL": "https://github.com/shakfu/ssp",
+    "source": "card"
+  },
+  {
+    "code": "CHUK",
+    "file": "chuk.so",
+    "name": "ChucK",
+    "summary": "ChucK live-coding host",
+    "author": "shakfu",
+    "kind": "host",
+    "docsURL": "https://github.com/shakfu/ssp",
+    "source": "card"
+  },
+  {
+    "code": "CLDS",
+    "file": "clds.so",
+    "name": "Clouds",
+    "summary": "Mutable Instruments Clouds granular / texture port",
     "author": "Technobear",
-    "kind": "mix",
+    "kind": "fx",
     "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
     "source": "card"
   },
   {
-    "code": "PMIX",
-    "file": "pmix.so",
-    "name": "Perf Mixer",
-    "summary": "Performance mixer (SSP)",
-    "author": "Technobear",
-    "kind": "mix",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
-    "source": "card"
-  },
-  {
-    "code": "PVCA",
-    "file": "pvca.so",
-    "name": "Panning VCA",
-    "summary": "Quad stereo VCA with gain + pan",
-    "author": "Technobear",
-    "kind": "mix",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
-    "source": "card"
-  },
-  {
-    "code": "VECT",
-    "file": "vect.so",
-    "name": "Vector",
-    "summary": "Vector panner — place a signal in Cartesian space",
-    "author": "Technobear",
-    "kind": "mix",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
-    "source": "card"
-  },
-  {
-    "code": "SHQ",
-    "file": "shq.so",
-    "name": "S&H + Quant",
-    "summary": "Sample & hold with optional quantize / transpose",
-    "author": "Technobear",
-    "kind": "mod",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
-    "source": "card"
-  },
-  {
-    "code": "VOST",
-    "file": "vost.so",
-    "name": "Voltage Store",
-    "summary": "10 banks × 16 stored voltages",
-    "author": "Technobear",
-    "kind": "mod",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
-    "source": "card"
-  },
-  {
-    "code": "LOGI",
-    "file": "logi.so",
-    "name": "Logic",
-    "summary": "Quad logic module",
-    "author": "Technobear",
-    "kind": "mod",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
+    "code": "CLIK",
+    "file": "CLIK.so",
+    "name": "Click Metro",
+    "summary": "Metronome click with AD envelope for loopers",
+    "author": "Handsonicsuki",
+    "kind": "util",
+    "docsURL": "https://forum.percussa.com/t/handsonicsuki-s-test-modules/1616",
     "source": "card"
   },
   {
@@ -260,33 +147,52 @@
     "source": "card"
   },
   {
-    "code": "ORBT",
-    "file": "orbt.so",
-    "name": "Orbit",
-    "summary": "Polar → Cartesian conversion (pairs with VECT)",
+    "code": "CLPH",
+    "file": "CLPH.so",
+    "name": "Classic Phaser",
+    "summary": "Stereo phaser from RNBO Guitar Pedal pack",
+    "author": "Handsonicsuki",
+    "kind": "fx",
+    "docsURL": "https://forum.percussa.com/t/handsonicsuki-s-test-modules/1616",
+    "source": "card"
+  },
+  {
+    "code": "COM",
+    "name": "Comb",
+    "summary": "Comb filter",
+    "author": "Percussa",
+    "kind": "fx",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
+    "source": "factory"
+  },
+  {
+    "code": "COMP",
+    "file": "comp.so",
+    "name": "Compressor",
+    "summary": "Stereo compressor with sidechain",
     "author": "Technobear",
-    "kind": "mod",
+    "kind": "fx",
     "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
     "source": "card"
   },
   {
-    "code": "OMOD",
-    "file": "omod.so",
-    "name": "Octo Mod",
-    "summary": "Eight-channel modulator",
-    "author": "Technobear",
-    "kind": "mod",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
+    "code": "CSND",
+    "file": "csnd.so",
+    "name": "Csound",
+    "summary": "Csound 7 orchestra host",
+    "author": "shakfu",
+    "kind": "host",
+    "docsURL": "https://github.com/shakfu/ssp",
     "source": "card"
   },
   {
-    "code": "CART",
-    "file": "cart.so",
-    "name": "Cartesian Seq",
-    "summary": "Cartesian sequencer",
-    "author": "Technobear",
-    "kind": "seq",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
+    "code": "CVR4",
+    "file": "CVR4.so",
+    "name": "CV Rec 4",
+    "summary": "Four CV record/loop channels (gate-triggered, downsampled)",
+    "author": "Handsonicsuki",
+    "kind": "mod",
+    "docsURL": "https://forum.percussa.com/t/handsonicsuki-s-test-modules/1616",
     "source": "card"
   },
   {
@@ -300,22 +206,60 @@
     "source": "card"
   },
   {
-    "code": "SWAT",
-    "file": "swat.so",
-    "name": "Swiss Army",
-    "summary": "Swiss-army utility toolbox (SSP)",
+    "code": "DCG",
+    "name": "DC Gen",
+    "summary": "DC voltage generator",
+    "author": "Percussa",
+    "kind": "mod",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
+    "source": "factory"
+  },
+  {
+    "code": "DEXD",
+    "file": "dexd.so",
+    "name": "Dexed",
+    "summary": "6-op FM synth (Dexed / Synth_Dexed engine)",
+    "author": "shakfu",
+    "kind": "synth",
+    "docsURL": "https://github.com/shakfu/ssp",
+    "source": "card"
+  },
+  {
+    "code": "DIST",
+    "file": "DIST.so",
+    "name": "Distortion",
+    "summary": "Distortion + tone stack (RNBO Guitar Pedal, CVCTRL)",
+    "author": "Handsonicsuki",
+    "kind": "fx",
+    "docsURL": "https://forum.percussa.com/t/handsonicsuki-s-test-modules/1616",
+    "source": "card"
+  },
+  {
+    "code": "DLY",
+    "name": "Delay",
+    "summary": "Stereo delay",
+    "author": "Percussa",
+    "kind": "fx",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
+    "source": "factory"
+  },
+  {
+    "code": "DLYD",
+    "file": "dlyd.so",
+    "name": "Delay",
+    "summary": "Multi-tap delay",
     "author": "Technobear",
-    "kind": "util",
+    "kind": "fx",
     "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
     "source": "card"
   },
   {
-    "code": "TRAX",
-    "file": "trax.so",
-    "name": "Trax",
-    "summary": "Virtual modular-in-a-module (host nested modules)",
+    "code": "DRUM",
+    "file": "drum.so",
+    "name": "Drum",
+    "summary": "Synthesized drum kit \u2014 quick percussion voices",
     "author": "Technobear",
-    "kind": "host",
+    "kind": "synth",
     "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
     "source": "card"
   },
@@ -330,6 +274,201 @@
     "source": "card"
   },
   {
+    "code": "EDRM",
+    "file": "edrm.so",
+    "name": "Euclid Drums",
+    "summary": "Euclidean drum machine",
+    "author": "shakfu",
+    "kind": "seq",
+    "docsURL": "https://github.com/shakfu/ssp",
+    "source": "card"
+  },
+  {
+    "code": "EFL",
+    "name": "Env Follower",
+    "summary": "Envelope follower",
+    "author": "Percussa",
+    "kind": "mod",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
+    "source": "factory"
+  },
+  {
+    "code": "ENV",
+    "name": "Envelope",
+    "summary": "ADSR envelope",
+    "author": "Percussa",
+    "kind": "mod",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
+    "source": "factory"
+  },
+  {
+    "code": "EREV",
+    "file": "EREV.so",
+    "name": "Erbe-Verb",
+    "summary": "Erbe-Verb inspired reverb (dm-Erbeverb / Tom Erbe)",
+    "author": "Handsonicsuki",
+    "kind": "fx",
+    "docsURL": "https://forum.percussa.com/t/handsonicsuki-s-test-modules/1616",
+    "source": "card"
+  },
+  {
+    "code": "FDNR",
+    "file": "FDNR.so",
+    "name": "FDN Reverb",
+    "summary": "16-delay-line feedback delay network reverb",
+    "author": "Handsonicsuki",
+    "kind": "fx",
+    "docsURL": "https://forum.percussa.com/t/handsonicsuki-s-test-modules/1616",
+    "source": "card"
+  },
+  {
+    "code": "FLNG",
+    "file": "FLNG.so",
+    "name": "Flanger",
+    "summary": "Stereo flanger from RNBO Guitar Pedal pack",
+    "author": "Handsonicsuki",
+    "kind": "fx",
+    "docsURL": "https://forum.percussa.com/t/handsonicsuki-s-test-modules/1616",
+    "source": "card"
+  },
+  {
+    "code": "FSTR",
+    "file": "fstr.so",
+    "name": "Faust",
+    "summary": "Faust host \u2014 JIT-compiles .dsp from the card (libfaust)",
+    "author": "shakfu",
+    "kind": "host",
+    "docsURL": "https://github.com/shakfu/ssp",
+    "source": "card"
+  },
+  {
+    "code": "FSYN",
+    "file": "fsyn.so",
+    "name": "FluidSynth",
+    "summary": "SoundFont (SF2) synth \u2014 pairs with ALDA / GSEQ MIDI",
+    "author": "shakfu",
+    "kind": "synth",
+    "docsURL": "https://github.com/shakfu/ssp",
+    "source": "card"
+  },
+  {
+    "code": "GLTC",
+    "file": "gltc.so",
+    "name": "Glitch",
+    "summary": "Dual lo-fi noise voices (Noisferatu / sk-engines)",
+    "author": "shakfu",
+    "kind": "synth",
+    "docsURL": "https://github.com/shakfu/ssp",
+    "source": "card"
+  },
+  {
+    "code": "GRA",
+    "name": "Granular",
+    "summary": "Granular oscillator",
+    "author": "Percussa",
+    "kind": "synth",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
+    "source": "factory"
+  },
+  {
+    "code": "GRA4",
+    "file": "gra4.so",
+    "name": "Granulator",
+    "summary": "4-track granulator",
+    "author": "Technobear",
+    "kind": "fx",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
+    "source": "card"
+  },
+  {
+    "code": "GREV",
+    "file": "GREV.so",
+    "name": "Gigaverb",
+    "summary": "Gigaverb reverb (Gen~ / Juhana Sadeharju algorithm)",
+    "author": "Handsonicsuki",
+    "kind": "fx",
+    "docsURL": "https://forum.percussa.com/t/handsonicsuki-s-test-modules/1616",
+    "source": "card"
+  },
+  {
+    "code": "GRID",
+    "file": "GRID.so",
+    "name": "GRID",
+    "summary": "8-channel sample player (BitBox / Elektron-style setup)",
+    "author": "kuttor",
+    "kind": "sampler",
+    "docsURL": "https://github.com/kuttor/Percussa-SSP--GRID",
+    "source": "card"
+  },
+  {
+    "code": "GSEQ",
+    "file": "gseq.so",
+    "name": "Grid Seq",
+    "summary": "8\u00d732 grid step sequencer \u2192 MIDI + CV (no audio)",
+    "author": "shakfu",
+    "kind": "seq",
+    "docsURL": "https://github.com/shakfu/ssp",
+    "source": "card"
+  },
+  {
+    "code": "HARM",
+    "file": "harm.so",
+    "name": "Harmonic",
+    "summary": "16-band harmonic oscillator",
+    "author": "Technobear",
+    "kind": "synth",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
+    "source": "card"
+  },
+  {
+    "code": "INP",
+    "name": "Input",
+    "summary": "Hardware / USB audio inputs into the patch",
+    "author": "Percussa",
+    "kind": "io",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
+    "source": "factory"
+  },
+  {
+    "code": "JOYS",
+    "file": "joys.so",
+    "name": "Joystick",
+    "summary": "Game-controller / joystick interface (SSP)",
+    "author": "Technobear",
+    "kind": "io",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
+    "source": "card"
+  },
+  {
+    "code": "LDRF",
+    "file": "ldrf.so",
+    "name": "Ladder Filter",
+    "summary": "Quad ladder filter",
+    "author": "Technobear",
+    "kind": "fx",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
+    "source": "card"
+  },
+  {
+    "code": "LFO",
+    "name": "LFO / Osc",
+    "summary": "Multi-waveform oscillator (LFO + audio rate)",
+    "author": "Percussa",
+    "kind": "synth",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/LFO",
+    "source": "factory"
+  },
+  {
+    "code": "LIMT",
+    "file": "Limt.so",
+    "name": "Limiter",
+    "summary": "Stereo limiter from RNBO Guitar Pedal pack",
+    "author": "Handsonicsuki",
+    "kind": "fx",
+    "docsURL": "https://forum.percussa.com/t/handsonicsuki-s-test-modules/1616",
+    "source": "card"
+  },
+  {
     "code": "LINK",
     "file": "link.so",
     "name": "Ableton Link",
@@ -340,12 +479,60 @@
     "source": "card"
   },
   {
-    "code": "JOYS",
-    "file": "joys.so",
-    "name": "Joystick",
-    "summary": "Game-controller / joystick interface (SSP)",
+    "code": "LOGI",
+    "file": "logi.so",
+    "name": "Logic",
+    "summary": "Quad logic module",
     "author": "Technobear",
-    "kind": "io",
+    "kind": "mod",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
+    "source": "card"
+  },
+  {
+    "code": "LOOP",
+    "file": "loop.so",
+    "name": "Looper",
+    "summary": "Simple 4-track looper",
+    "author": "Technobear",
+    "kind": "fx",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
+    "source": "card"
+  },
+  {
+    "code": "MAC",
+    "name": "Macro",
+    "summary": "Macro control module",
+    "author": "Percussa",
+    "kind": "util",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
+    "source": "factory"
+  },
+  {
+    "code": "MIDI",
+    "name": "MIDI",
+    "summary": "Built-in MIDI module (incl. MPE)",
+    "author": "Percussa",
+    "kind": "midi",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
+    "source": "factory"
+  },
+  {
+    "code": "MMX4",
+    "file": "mmx4.so",
+    "name": "Matrix Mixer",
+    "summary": "4\u00d7 stereo in \u2192 4\u00d7 stereo out matrix, CV controllable",
+    "author": "Technobear",
+    "kind": "mix",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
+    "source": "card"
+  },
+  {
+    "code": "MSW8",
+    "file": "msw8.so",
+    "name": "Switch Matrix",
+    "summary": "8 in / 8 out switch matrix",
+    "author": "Technobear",
+    "kind": "mix",
     "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
     "source": "card"
   },
@@ -380,6 +567,15 @@
     "source": "card"
   },
   {
+    "code": "MTQ",
+    "name": "Microtonal Q",
+    "summary": "Microtonal quantizer",
+    "author": "Percussa",
+    "kind": "mod",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
+    "source": "factory"
+  },
+  {
     "code": "MTTR",
     "file": "mttr.so",
     "name": "MIDI Triggers",
@@ -390,123 +586,89 @@
     "source": "card"
   },
   {
-    "code": "ALDA",
-    "file": "alda.so",
-    "name": "Alda",
-    "summary": "Alda music-notation sequencer → gates / pitch CV / MIDI (no audio)",
-    "author": "shakfu",
-    "kind": "seq",
-    "docsURL": "https://github.com/shakfu/ssp",
-    "source": "card"
-  },
-  {
-    "code": "BARD",
-    "file": "bard.so",
-    "name": "Bard",
-    "summary": "Dual spoken-word / audiobook player with bookmarks",
-    "author": "shakfu",
-    "kind": "sampler",
-    "docsURL": "https://github.com/shakfu/ssp",
-    "source": "card"
-  },
-  {
-    "code": "BRKS",
-    "file": "brks.so",
-    "name": "Breaks",
-    "summary": "Zack Scholl _core breakbeat slicer + random FX",
-    "author": "shakfu",
-    "kind": "sampler",
-    "docsURL": "https://github.com/shakfu/ssp",
-    "source": "card"
-  },
-  {
-    "code": "CHRS",
-    "file": "chrs.so",
-    "name": "Chorus",
-    "summary": "Stereo chorus (Faust DSP from sk-engines)",
-    "author": "shakfu",
-    "kind": "fx",
-    "docsURL": "https://github.com/shakfu/ssp",
-    "source": "card"
-  },
-  {
-    "code": "CHUK",
-    "file": "chuk.so",
-    "name": "ChucK",
-    "summary": "ChucK live-coding host",
-    "author": "shakfu",
-    "kind": "host",
-    "docsURL": "https://github.com/shakfu/ssp",
-    "source": "card"
-  },
-  {
-    "code": "CSND",
-    "file": "csnd.so",
-    "name": "Csound",
-    "summary": "Csound 7 orchestra host",
-    "author": "shakfu",
-    "kind": "host",
-    "docsURL": "https://github.com/shakfu/ssp",
-    "source": "card"
-  },
-  {
-    "code": "DEXD",
-    "file": "dexd.so",
-    "name": "Dexed",
-    "summary": "6-op FM synth (Dexed / Synth_Dexed engine)",
-    "author": "shakfu",
+    "code": "NOI",
+    "name": "Noise",
+    "summary": "Noise generator",
+    "author": "Percussa",
     "kind": "synth",
-    "docsURL": "https://github.com/shakfu/ssp",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
+    "source": "factory"
+  },
+  {
+    "code": "OMOD",
+    "file": "omod.so",
+    "name": "Octo Mod",
+    "summary": "Eight-channel modulator",
+    "author": "Technobear",
+    "kind": "mod",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
     "source": "card"
   },
   {
-    "code": "EDRM",
-    "file": "edrm.so",
-    "name": "Euclid Drums",
-    "summary": "Euclidean drum machine",
-    "author": "shakfu",
-    "kind": "seq",
-    "docsURL": "https://github.com/shakfu/ssp",
+    "code": "ORBT",
+    "file": "orbt.so",
+    "name": "Orbit",
+    "summary": "Polar \u2192 Cartesian conversion (pairs with VECT)",
+    "author": "Technobear",
+    "kind": "mod",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
     "source": "card"
   },
   {
-    "code": "FSTR",
-    "file": "fstr.so",
-    "name": "Faust",
-    "summary": "Faust host — JIT-compiles .dsp from the card (libfaust)",
-    "author": "shakfu",
-    "kind": "host",
-    "docsURL": "https://github.com/shakfu/ssp",
-    "source": "card"
+    "code": "OUT",
+    "name": "Output",
+    "summary": "Mix to hardware outs (also records)",
+    "author": "Percussa",
+    "kind": "io",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
+    "source": "factory"
   },
   {
-    "code": "FSYN",
-    "file": "fsyn.so",
-    "name": "FluidSynth",
-    "summary": "SoundFont (SF2) synth — pairs with ALDA / GSEQ MIDI",
-    "author": "shakfu",
+    "code": "PLTS",
+    "file": "plts.so",
+    "name": "Plaits",
+    "summary": "Mutable Instruments Plaits macro-oscillator port",
+    "author": "Technobear",
     "kind": "synth",
-    "docsURL": "https://github.com/shakfu/ssp",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
     "source": "card"
   },
   {
-    "code": "GLTC",
-    "file": "gltc.so",
-    "name": "Glitch",
-    "summary": "Dual lo-fi noise voices (Noisferatu / sk-engines)",
-    "author": "shakfu",
+    "code": "PLY",
+    "name": "Polygon",
+    "summary": "Polygon oscillator",
+    "author": "Percussa",
     "kind": "synth",
-    "docsURL": "https://github.com/shakfu/ssp",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
+    "source": "factory"
+  },
+  {
+    "code": "PMIX",
+    "file": "pmix.so",
+    "name": "Perf Mixer",
+    "summary": "Performance mixer (SSP)",
+    "author": "Technobear",
+    "kind": "mix",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
     "source": "card"
   },
   {
-    "code": "GSEQ",
-    "file": "gseq.so",
-    "name": "Grid Seq",
-    "summary": "8×32 grid step sequencer → MIDI + CV (no audio)",
-    "author": "shakfu",
-    "kind": "seq",
-    "docsURL": "https://github.com/shakfu/ssp",
+    "code": "PMM",
+    "name": "Membrane",
+    "summary": "Physical-modelled membrane (PWM/PMM)",
+    "author": "Percussa",
+    "kind": "synth",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
+    "source": "factory"
+  },
+  {
+    "code": "POGO",
+    "file": "POGO.so",
+    "name": "Polygonal Synth",
+    "summary": "Polygonal synthesis oscillator/LFO (fendoap Gen, OSC\u2194LFO)",
+    "author": "Handsonicsuki",
+    "kind": "synth",
+    "docsURL": "https://forum.percussa.com/t/handsonicsuki-s-test-modules/1616",
     "source": "card"
   },
   {
@@ -517,6 +679,36 @@
     "author": "shakfu",
     "kind": "host",
     "docsURL": "https://github.com/shakfu/ssp",
+    "source": "card"
+  },
+  {
+    "code": "PRGT",
+    "file": "PRGT.so",
+    "name": "Prob Gate",
+    "summary": "Probability gate \u2014 open/close on trigger by % (RNBO)",
+    "author": "Handsonicsuki",
+    "kind": "mod",
+    "docsURL": "https://forum.percussa.com/t/handsonicsuki-s-test-modules/1616",
+    "source": "card"
+  },
+  {
+    "code": "PVCA",
+    "file": "pvca.so",
+    "name": "Panning VCA",
+    "summary": "Quad stereo VCA with gain + pan",
+    "author": "Technobear",
+    "kind": "mix",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
+    "source": "card"
+  },
+  {
+    "code": "QVCA",
+    "file": "qvca.so",
+    "name": "Quad VCA",
+    "summary": "SDK example \u2014 4 VCAs (also listed as factory demo)",
+    "author": "Percussa",
+    "kind": "mix",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
     "source": "card"
   },
   {
@@ -540,124 +732,31 @@
     "source": "card"
   },
   {
-    "code": "SAPF",
-    "file": "sapf.so",
-    "name": "sapf",
-    "summary": "sapf live-coding — Forth-like lazy audio language",
-    "author": "shakfu",
-    "kind": "host",
-    "docsURL": "https://github.com/shakfu/ssp",
+    "code": "RNGS",
+    "file": "rngs.so",
+    "name": "Rings",
+    "summary": "Mutable Instruments Rings resonator port",
+    "author": "Technobear",
+    "kind": "synth",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
     "source": "card"
   },
   {
-    "code": "SCSY",
-    "file": "scsy.so",
-    "name": "SuperCollider",
-    "summary": "scsynth host — run .scsyndef SynthDefs (+ sc3-plugins)",
-    "author": "shakfu",
-    "kind": "host",
-    "docsURL": "https://github.com/shakfu/ssp",
+    "code": "RPAN",
+    "file": "RPAN.so",
+    "name": "Random Pan",
+    "summary": "Clocked random stereo panner",
+    "author": "Handsonicsuki",
+    "kind": "mix",
+    "docsURL": "https://forum.percussa.com/t/handsonicsuki-s-test-modules/1616",
     "source": "card"
   },
   {
-    "code": "SFCT",
-    "file": "sfct.so",
-    "name": "softcut",
-    "summary": "monome softcut looper — 4 stereo tracks / 8 voices",
-    "author": "shakfu",
+    "code": "RVB",
+    "name": "Reverb",
+    "summary": "Factory reverb",
+    "author": "Percussa",
     "kind": "fx",
-    "docsURL": "https://github.com/shakfu/ssp",
-    "source": "card"
-  },
-  {
-    "code": "STRC",
-    "file": "strc.so",
-    "name": "PaulStretch",
-    "summary": "Dual real-time PaulStretch decks (live or file)",
-    "author": "shakfu",
-    "kind": "fx",
-    "docsURL": "https://github.com/shakfu/ssp",
-    "source": "card"
-  },
-  {
-    "code": "TTYP",
-    "file": "ttyp.so",
-    "name": "Teletype",
-    "summary": "monome Teletype 5 — scripted CV/gates from USB keyboard",
-    "author": "shakfu",
-    "kind": "mod",
-    "docsURL": "https://github.com/shakfu/ssp",
-    "source": "card"
-  },
-  {
-    "code": "INP",
-    "name": "Input",
-    "summary": "Hardware / USB audio inputs into the patch",
-    "author": "Percussa",
-    "kind": "io",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
-    "source": "factory"
-  },
-  {
-    "code": "OUT",
-    "name": "Output",
-    "summary": "Mix to hardware outs (also records)",
-    "author": "Percussa",
-    "kind": "io",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
-    "source": "factory"
-  },
-  {
-    "code": "BUS",
-    "name": "Bus",
-    "summary": "Internal audio/CV bus",
-    "author": "Percussa",
-    "kind": "io",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
-    "source": "factory"
-  },
-  {
-    "code": "MIDI",
-    "name": "MIDI",
-    "summary": "Built-in MIDI module (incl. MPE)",
-    "author": "Percussa",
-    "kind": "midi",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
-    "source": "factory"
-  },
-  {
-    "code": "LFO",
-    "name": "LFO / Osc",
-    "summary": "Multi-waveform oscillator (LFO + audio rate)",
-    "author": "Percussa",
-    "kind": "synth",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/LFO",
-    "source": "factory"
-  },
-  {
-    "code": "NOI",
-    "name": "Noise",
-    "summary": "Noise generator",
-    "author": "Percussa",
-    "kind": "synth",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
-    "source": "factory"
-  },
-  {
-    "code": "WTO",
-    "name": "Wavetable",
-    "summary": "Wavetable oscillator",
-    "author": "Percussa",
-    "kind": "synth",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
-    "source": "factory"
-  },
-  {
-    "code": "GRA",
-    "name": "Granular",
-    "summary": "Granular oscillator",
-    "author": "Percussa",
-    "kind": "synth",
     "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
     "source": "factory"
   },
@@ -671,49 +770,24 @@
     "source": "factory"
   },
   {
-    "code": "PMM",
-    "name": "Membrane",
-    "summary": "Physical-modelled membrane (PWM/PMM)",
-    "author": "Percussa",
-    "kind": "synth",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
-    "source": "factory"
+    "code": "SAPF",
+    "file": "sapf.so",
+    "name": "sapf",
+    "summary": "sapf live-coding \u2014 Forth-like lazy audio language",
+    "author": "shakfu",
+    "kind": "host",
+    "docsURL": "https://github.com/shakfu/ssp",
+    "source": "card"
   },
   {
-    "code": "PLY",
-    "name": "Polygon",
-    "summary": "Polygon oscillator",
-    "author": "Percussa",
-    "kind": "synth",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
-    "source": "factory"
-  },
-  {
-    "code": "SVF",
-    "name": "SVF",
-    "summary": "Quad state-variable filter",
-    "author": "Percussa",
-    "kind": "fx",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
-    "source": "factory"
-  },
-  {
-    "code": "COM",
-    "name": "Comb",
-    "summary": "Comb filter",
-    "author": "Percussa",
-    "kind": "fx",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
-    "source": "factory"
-  },
-  {
-    "code": "DLY",
-    "name": "Delay",
-    "summary": "Stereo delay",
-    "author": "Percussa",
-    "kind": "fx",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
-    "source": "factory"
+    "code": "SCSY",
+    "file": "scsy.so",
+    "name": "SuperCollider",
+    "summary": "scsynth host \u2014 run .scsyndef SynthDefs (+ sc3-plugins)",
+    "author": "shakfu",
+    "kind": "host",
+    "docsURL": "https://github.com/shakfu/ssp",
+    "source": "card"
   },
   {
     "code": "SDL",
@@ -725,67 +799,94 @@
     "source": "factory"
   },
   {
-    "code": "BCR",
-    "name": "Bitcrusher",
-    "summary": "Bit crusher",
-    "author": "Percussa",
+    "code": "SDLY",
+    "file": "SDLY.so",
+    "name": "Short Delay",
+    "summary": "1\u201350 ms short delay / Karplus-Strong texture",
+    "author": "Handsonicsuki",
     "kind": "fx",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
-    "source": "factory"
+    "docsURL": "https://forum.percussa.com/t/handsonicsuki-s-test-modules/1616",
+    "source": "card"
   },
   {
-    "code": "RVB",
+    "code": "SFCT",
+    "file": "sfct.so",
+    "name": "softcut",
+    "summary": "monome softcut looper \u2014 4 stereo tracks / 8 voices",
+    "author": "shakfu",
+    "kind": "fx",
+    "docsURL": "https://github.com/shakfu/ssp",
+    "source": "card"
+  },
+  {
+    "code": "SFFT",
+    "file": "sfft.so",
+    "name": "Spectral FFT",
+    "summary": "Spectral FFT processor \u2014 pitch/gain bins (RNBO)",
+    "author": "Technobear",
+    "kind": "fx",
+    "docsURL": "https://github.com/TheTechnobear/SSP",
+    "source": "card"
+  },
+  {
+    "code": "SFLT",
+    "file": "sflt.so",
+    "name": "Spectral Filter",
+    "summary": "Bin-based spectral filter (RNBO)",
+    "author": "Technobear",
+    "kind": "fx",
+    "docsURL": "https://github.com/TheTechnobear/SSP",
+    "source": "card"
+  },
+  {
+    "code": "SHEQ",
+    "file": "SHEQ.so",
+    "name": "Shelving EQ",
+    "summary": "Shelving EQ with Hz crossovers (RNBO)",
+    "author": "Handsonicsuki",
+    "kind": "fx",
+    "docsURL": "https://forum.percussa.com/t/handsonicsuki-s-test-modules/1616",
+    "source": "card"
+  },
+  {
+    "code": "SHQ",
+    "file": "shq.so",
+    "name": "S&H + Quant",
+    "summary": "Sample & hold with optional quantize / transpose",
+    "author": "Technobear",
+    "kind": "mod",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
+    "source": "card"
+  },
+  {
+    "code": "SPRG",
+    "file": "SPRG.so",
+    "name": "Spring Reverb",
+    "summary": "Spring-reverb style delay network",
+    "author": "Handsonicsuki",
+    "kind": "fx",
+    "docsURL": "https://forum.percussa.com/t/handsonicsuki-s-test-modules/1616",
+    "source": "card"
+  },
+  {
+    "code": "SRDP",
+    "file": "srdp.so",
+    "name": "Serendipity",
+    "summary": "3 decks (A/B tape + S synced), Butter sidecars, glide/FX, master bus",
+    "author": "BENDYmusic",
+    "kind": "sampler",
+    "docsURL": "https://github.com/workcolony/serendipity-ssp",
+    "source": "card"
+  },
+  {
+    "code": "SRVB",
+    "file": "srvb.so",
     "name": "Reverb",
-    "summary": "Factory reverb",
-    "author": "Percussa",
+    "summary": "Simple reverb",
+    "author": "Technobear",
     "kind": "fx",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
-    "source": "factory"
-  },
-  {
-    "code": "WS",
-    "name": "Waveshaper",
-    "summary": "Waveshaper",
-    "author": "Percussa",
-    "kind": "fx",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
-    "source": "factory"
-  },
-  {
-    "code": "ENV",
-    "name": "Envelope",
-    "summary": "ADSR envelope",
-    "author": "Percussa",
-    "kind": "mod",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
-    "source": "factory"
-  },
-  {
-    "code": "EFL",
-    "name": "Env Follower",
-    "summary": "Envelope follower",
-    "author": "Percussa",
-    "kind": "mod",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
-    "source": "factory"
-  },
-  {
-    "code": "DCG",
-    "name": "DC Gen",
-    "summary": "DC voltage generator",
-    "author": "Percussa",
-    "kind": "mod",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
-    "source": "factory"
-  },
-  {
-    "code": "ARP",
-    "name": "Arpeggiator",
-    "summary": "Arpeggiator",
-    "author": "Percussa",
-    "kind": "seq",
-    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
-    "source": "factory"
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
+    "source": "card"
   },
   {
     "code": "STE",
@@ -797,6 +898,45 @@
     "source": "factory"
   },
   {
+    "code": "STPH",
+    "file": "STPH.so",
+    "name": "Stereo Phaser CV",
+    "summary": "CV-controllable stereo phaser (CLPH + CV)",
+    "author": "Handsonicsuki",
+    "kind": "fx",
+    "docsURL": "https://forum.percussa.com/t/handsonicsuki-s-test-modules/1616",
+    "source": "card"
+  },
+  {
+    "code": "STRC",
+    "file": "strc.so",
+    "name": "PaulStretch",
+    "summary": "Dual real-time PaulStretch decks (live or file)",
+    "author": "shakfu",
+    "kind": "fx",
+    "docsURL": "https://github.com/shakfu/ssp",
+    "source": "card"
+  },
+  {
+    "code": "SVF",
+    "name": "SVF",
+    "summary": "Quad state-variable filter",
+    "author": "Percussa",
+    "kind": "fx",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
+    "source": "factory"
+  },
+  {
+    "code": "SWAT",
+    "file": "swat.so",
+    "name": "Swiss Army",
+    "summary": "Swiss-army utility toolbox (SSP)",
+    "author": "Technobear",
+    "kind": "util",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
+    "source": "card"
+  },
+  {
     "code": "SWI",
     "name": "Switcher",
     "summary": "Signal switcher",
@@ -804,6 +944,26 @@
     "kind": "mix",
     "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
     "source": "factory"
+  },
+  {
+    "code": "TRAX",
+    "file": "trax.so",
+    "name": "Trax",
+    "summary": "Virtual modular-in-a-module (host nested modules)",
+    "author": "Technobear",
+    "kind": "host",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
+    "source": "card"
+  },
+  {
+    "code": "TTYP",
+    "file": "ttyp.so",
+    "name": "Teletype",
+    "summary": "monome Teletype 5 \u2014 scripted CV/gates from USB keyboard",
+    "author": "shakfu",
+    "kind": "mod",
+    "docsURL": "https://github.com/shakfu/ssp",
+    "source": "card"
   },
   {
     "code": "VCA",
@@ -815,20 +975,40 @@
     "source": "factory"
   },
   {
-    "code": "MAC",
-    "name": "Macro",
-    "summary": "Macro control module",
+    "code": "VECT",
+    "file": "vect.so",
+    "name": "Vector",
+    "summary": "Vector panner \u2014 place a signal in Cartesian space",
+    "author": "Technobear",
+    "kind": "mix",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
+    "source": "card"
+  },
+  {
+    "code": "VOST",
+    "file": "vost.so",
+    "name": "Voltage Store",
+    "summary": "10 banks \u00d7 16 stored voltages",
+    "author": "Technobear",
+    "kind": "mod",
+    "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:TheTechnobear",
+    "source": "card"
+  },
+  {
+    "code": "WS",
+    "name": "Waveshaper",
+    "summary": "Waveshaper",
     "author": "Percussa",
-    "kind": "util",
+    "kind": "fx",
     "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
     "source": "factory"
   },
   {
-    "code": "MTQ",
-    "name": "Microtonal Q",
-    "summary": "Microtonal quantizer",
+    "code": "WTO",
+    "name": "Wavetable",
+    "summary": "Wavetable oscillator",
     "author": "Percussa",
-    "kind": "mod",
+    "kind": "synth",
     "docsURL": "https://github.com/TheTechnobear/SSP/wiki/Modules:Factory",
     "source": "factory"
   }

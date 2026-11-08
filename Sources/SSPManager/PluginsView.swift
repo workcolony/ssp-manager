@@ -35,6 +35,7 @@ struct PluginsView: View {
 private enum CatalogPresence: String, CaseIterable, Identifiable {
     case all = "All"
     case onCard = "On card"
+    case disabled = "Disabled"
     case notInstalled = "Not installed"
     case factory = "Factory"
     var id: String { rawValue }
@@ -48,7 +49,7 @@ private struct CatalogRow: Identifiable, Hashable {
     let name: String
     let author: String
     let kind: String
-    /// Sortable label: "factory" / "yes" / "no"
+    /// Sortable label: "factory" / "yes" / "disabled" / "no"
     let onCard: String
 }
 
@@ -68,7 +69,10 @@ private enum CatalogSort: String, CaseIterable, Identifiable {
 
 struct PluginsCatalogView: View {
     @Environment(SSPService.self) private var ssp
+    /// Lowercased `.so` filenames currently in `plugins/`.
     @State private var installed = Set<String>()
+    /// Lowercased `.so` filenames in `plugins-disabled/`.
+    @State private var disabled = Set<String>()
     @State private var query = ""
     @State private var author = "All"
     @State private var kind = "All"
@@ -82,8 +86,10 @@ struct PluginsCatalogView: View {
 
     private func onCardLabel(_ p: CatalogPlugin) -> String {
         if p.isFactory { return "factory" }
-        guard let f = p.file else { return "no" }
-        return installed.contains(f) ? "yes" : "no"
+        guard let f = p.file?.lowercased() else { return "no" }
+        if installed.contains(f) { return "yes" }
+        if disabled.contains(f) { return "disabled" }
+        return "no"
     }
 
     private var rows: [CatalogRow] {
@@ -92,17 +98,21 @@ struct PluginsCatalogView: View {
         var list = PluginCatalog.all.filter { p in
             if author != "All", p.author != author { return false }
             if kind != "All", p.kind != kind { return false }
+            let file = p.file?.lowercased()
             switch presence {
             case .all: break
             case .factory:
                 if !p.isFactory { return false }
             case .onCard:
                 if p.isFactory { return false }
-                guard let f = p.file, installed.contains(f) else { return false }
+                guard let f = file, installed.contains(f) else { return false }
+            case .disabled:
+                if p.isFactory { return false }
+                guard let f = file, disabled.contains(f) else { return false }
             case .notInstalled:
                 if p.isFactory { return false }
-                guard let f = p.file else { return false }
-                if installed.contains(f) { return false }
+                guard let f = file else { return false }
+                if installed.contains(f) || disabled.contains(f) { return false }
             }
             if words.isEmpty { return true }
             let hay = "\(p.code) \(p.name) \(p.summary) \(p.author) \(p.kind)".lowercased()
@@ -181,7 +191,7 @@ struct PluginsCatalogView: View {
                 Picker("Presence", selection: $presence) {
                     ForEach(CatalogPresence.allCases) { Text($0.rawValue).tag($0) }
                 }
-                .frame(maxWidth: 140)
+                .frame(maxWidth: 160)
                 Button {
                     Task { await refreshInstalled() }
                 } label: {
@@ -219,15 +229,20 @@ struct PluginsCatalogView: View {
                             Text("factory").foregroundStyle(.secondary)
                         case "yes":
                             Text("yes").foregroundStyle(.green)
+                        case "disabled":
+                            Text("disabled").foregroundStyle(.yellow)
                         default:
                             Text("no").foregroundStyle(.orange)
                         }
                     }
-                    .width(80)
+                    .width(88)
                     TableColumn("Kind", value: \.kind)
                         .width(70)
                 }
+                .frame(minWidth: 480)
+                .layoutPriority(1)
 
+                // Fixed-width detail pane so selecting a row doesn't reflow the split.
                 Group {
                     if let p = selected {
                         catalogDetail(p)
@@ -237,7 +252,8 @@ struct PluginsCatalogView: View {
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
                 }
-                .frame(minWidth: 280, idealWidth: 320)
+                .frame(minWidth: 300, idealWidth: 320, maxWidth: 360)
+                .layoutPriority(0)
             }
         }
         .task { await refreshInstalled() }
@@ -248,35 +264,18 @@ struct PluginsCatalogView: View {
 
     @ViewBuilder
     private func catalogDetail(_ p: CatalogPlugin) -> some View {
+        let status = onCardLabel(p)
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
                 Text(p.code).font(.title2.monospaced()).fontWeight(.bold)
                 Text(p.name).font(.title3)
-                Spacer()
+                Spacer(minLength: 0)
             }
             HStack(spacing: 8) {
                 Text(p.author).font(.subheadline)
                 Text("·").foregroundStyle(.secondary)
                 Text(p.kind).font(.subheadline).foregroundStyle(.secondary)
-                if p.isFactory {
-                    Text("Factory")
-                        .font(.caption)
-                        .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(Color.secondary.opacity(0.2))
-                        .clipShape(Capsule())
-                } else if onCardLabel(p) == "yes" {
-                    Text("On card")
-                        .font(.caption)
-                        .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(Color.green.opacity(0.2))
-                        .clipShape(Capsule())
-                } else {
-                    Text("Not installed")
-                        .font(.caption)
-                        .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(Color.orange.opacity(0.2))
-                        .clipShape(Capsule())
-                }
+                statusBadge(status)
             }
             if let f = p.file {
                 Text(f).font(.caption.monospaced()).foregroundStyle(.secondary)
@@ -304,64 +303,219 @@ struct PluginsCatalogView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
+    private func statusBadge(_ status: String) -> some View {
+        let label: String
+        let color: Color
+        switch status {
+        case "factory":
+            label = "Factory"; color = Color.secondary
+        case "yes":
+            label = "On card"; color = .green
+        case "disabled":
+            label = "Disabled"; color = .yellow
+        default:
+            label = "Not installed"; color = .orange
+        }
+        return Text(label)
+            .font(.caption)
+            .padding(.horizontal, 6).padding(.vertical, 2)
+            .background(color.opacity(0.2))
+            .clipShape(Capsule())
+    }
+
     private func refreshInstalled() async {
-        let remote = await ssp.listPlugins()
-        installed = Set(remote.map(\.name))
+        async let active = ssp.listPlugins()
+        async let off = ssp.listDisabledPlugins()
+        installed = Set((await active).map { $0.name.lowercased() })
+        disabled = Set((await off).map { $0.name.lowercased() })
     }
 }
 
 // MARK: - Install
 
-/// Remote .so list on card vs local staging dir; install + restart.
+private struct CardPluginRow: Identifiable, Hashable {
+    var id: String { file }
+    let file: String
+    let title: String
+    let author: String
+    let status: String   // "active" | "disabled"
+
+    static func make(file: String, status: String) -> CardPluginRow {
+        let cat = PluginCatalog.forFile(file)
+        return CardPluginRow(
+            file: file,
+            title: cat?.name ?? "—",
+            author: cat?.author ?? "—",
+            status: status
+        )
+    }
+}
+
+/// Remote .so list on card vs local staging dir; install / disable / remove + restart.
 struct PluginsInstallView: View {
     @Environment(SSPService.self) private var ssp
-    @State private var remote: [RemoteItem] = []
+    @State private var active: [RemoteItem] = []
+    @State private var disabled: [RemoteItem] = []
+    @State private var cardSel = Set<String>()
     @State private var local: [URL] = []
-    @State private var sel: RemoteItem.ID?
     @State private var localSel = Set<URL>()
     @State private var staging = NSHomeDirectory()
-        + "/_dev/Percussa SSP/thirdparty-plugins"
+        + "/_dev/Percussa SSP/thirdparty-plugins/latest"
     @State private var restarting = false
+    @State private var busy = false
+    @State private var confirmRemove = false
+    @State private var needsRestart = false
+
+    private var cardRows: [CardPluginRow] {
+        let a = active.map { CardPluginRow.make(file: $0.name, status: "active") }
+        let d = disabled.map { CardPluginRow.make(file: $0.name, status: "disabled") }
+        return (a + d).sorted {
+            let t = $0.title.localizedStandardCompare($1.title)
+            if t != .orderedSame { return t == .orderedAscending }
+            return $0.file.localizedStandardCompare($1.file) == .orderedAscending
+        }
+    }
+
+    private var selectedActive: [String] {
+        cardSel.filter { name in active.contains { $0.name == name } }.sorted()
+    }
+    private var selectedDisabled: [String] {
+        cardSel.filter { name in disabled.contains { $0.name == name } }.sorted()
+    }
 
     private func scanLocal() {
+        let fm = FileManager.default
         var found: [URL] = []
-        if let e = FileManager.default.enumerator(
-            at: URL(fileURLWithPath: staging),
-            includingPropertiesForKeys: nil) {
-            for case let u as URL in e where u.pathExtension == "so"
-                      && !u.lastPathComponent.hasPrefix("._") {
-                found.append(u)
+        var seen = Set<String>()
+        // Walk manually so directory symlinks are followed.
+        var queue = [URL(fileURLWithPath: staging)]
+        while let dir = queue.first {
+            queue.removeFirst()
+            guard let items = try? fm.contentsOfDirectory(
+                at: dir,
+                includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey],
+                options: [.skipsHiddenFiles]
+            ) else { continue }
+            for u in items {
+                let name = u.lastPathComponent
+                if name.hasPrefix("._") { continue }
+                let resolved = u.resolvingSymlinksInPath()
+                var isDir: ObjCBool = false
+                guard fm.fileExists(atPath: resolved.path, isDirectory: &isDir) else { continue }
+                if isDir.boolValue {
+                    queue.append(resolved)
+                } else if resolved.pathExtension == "so" {
+                    let key = resolved.path
+                    if seen.insert(key).inserted {
+                        found.append(resolved)
+                    }
+                }
             }
         }
         local = found.sorted { $0.lastPathComponent < $1.lastPathComponent }
     }
 
-    private func remoteNames() -> Set<String> { Set(remote.map(\.name)) }
+    private func refreshCard() async {
+        active = await ssp.listPlugins()
+        disabled = await ssp.listDisabledPlugins()
+        let live = Set(active.map(\.name)).union(disabled.map(\.name))
+        cardSel = cardSel.intersection(live)
+    }
+
+    private func runCardOp(_ op: @escaping ([String]) async -> Void, names: [String]) {
+        guard !names.isEmpty else { return }
+        Task {
+            busy = true
+            await op(names)
+            await refreshCard()
+            busy = false
+            needsRestart = true
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text("on card (\(remote.count))").font(.headline)
+            HStack(spacing: 8) {
+                Text("on card (\(active.count) active · \(disabled.count) disabled)")
+                    .font(.headline)
+                if needsRestart {
+                    Text("Restart SYNTHOR to apply")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
                 Spacer()
-                Button { Task { remote = await ssp.listPlugins() } }
-                    label: { Image(systemName: "arrow.clockwise") }
+                Button {
+                    Task { await refreshCard() }
+                } label: { Image(systemName: "arrow.clockwise") }
+                .disabled(busy || !ssp.online)
                 Button {
                     Task {
                         restarting = true
                         await ssp.restartSynthor()
                         restarting = false
+                        needsRestart = false
                     }
-                } label: { Label(restarting ? "Restarting…" : "Restart SYNTHOR",
-                               systemImage: "power") }
-                .disabled(restarting || !ssp.online)
+                } label: {
+                    Label(restarting ? "Restarting…" : "Restart SYNTHOR",
+                          systemImage: "power")
+                }
+                .disabled(restarting || busy || !ssp.online)
             }
             .padding(8)
 
             HSplitView {
-                Table(remote, selection: $sel) {
-                    TableColumn("module", value: \.name)
-                    TableColumn("size") { Text($0.size).monospaced() }.width(90)
+                VStack(spacing: 0) {
+                    Table(cardRows, selection: $cardSel) {
+                        TableColumn("file", value: \.file)
+                            .width(min: 72, ideal: 88)
+                        TableColumn("name", value: \.title)
+                        TableColumn("author", value: \.author)
+                            .width(min: 80, ideal: 110)
+                        TableColumn("status") { row in
+                            Text(row.status)
+                                .font(.caption)
+                                .foregroundStyle(row.status == "active" ? .green : .secondary)
+                        }
+                        .width(72)
+                    }
+                    .disabled(busy || !ssp.online)
+
+                    HStack(spacing: 8) {
+                        Button {
+                            runCardOp({ names in
+                                for n in names { _ = await ssp.disablePlugin(n) }
+                            }, names: selectedActive)
+                        } label: {
+                            Label("Disable (\(selectedActive.count))",
+                                  systemImage: "pause.circle")
+                        }
+                        .disabled(selectedActive.isEmpty || busy || !ssp.online)
+                        .help("Move out of plugins/ so SYNTHOR won’t load them")
+
+                        Button {
+                            runCardOp({ names in
+                                for n in names { _ = await ssp.enablePlugin(n) }
+                            }, names: selectedDisabled)
+                        } label: {
+                            Label("Enable (\(selectedDisabled.count))",
+                                  systemImage: "play.circle")
+                        }
+                        .disabled(selectedDisabled.isEmpty || busy || !ssp.online)
+                        .help("Move back into plugins/ for the next SYNTHOR scan")
+
+                        Button {
+                            confirmRemove = true
+                        } label: {
+                            Label("Remove (\(cardSel.count))",
+                                  systemImage: "trash")
+                        }
+                        .disabled(cardSel.isEmpty || busy || !ssp.online)
+                        .help("Move to .trash (recoverable from Files)")
+                        Spacer()
+                    }
+                    .padding(8)
                 }
+                .frame(minWidth: 320)
 
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
@@ -374,11 +528,23 @@ struct PluginsInstallView: View {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 2) {
                             ForEach(local, id: \.self) { u in
-                                HStack {
-                                    Text(u.lastPathComponent).monospaced()
-                                    Spacer()
-                                    if remoteNames().contains(u.lastPathComponent) {
-                                        Text("installed").font(.caption).foregroundStyle(.green)
+                                let name = u.lastPathComponent
+                                let cat = PluginCatalog.forFile(name)
+                                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                    Text(name).monospaced().frame(width: 88, alignment: .leading)
+                                    VStack(alignment: .leading, spacing: 1) {
+                                        Text(cat?.name ?? "—")
+                                            .lineLimit(1)
+                                        Text(cat?.author ?? "—")
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                            .lineLimit(1)
+                                    }
+                                    Spacer(minLength: 4)
+                                    if active.contains(where: { $0.name == name }) {
+                                        Text("active").font(.caption).foregroundStyle(.green)
+                                    } else if disabled.contains(where: { $0.name == name }) {
+                                        Text("disabled").font(.caption).foregroundStyle(.secondary)
                                     }
                                 }
                                 .padding(4)
@@ -394,23 +560,41 @@ struct PluginsInstallView: View {
                     .frame(maxHeight: .infinity)
                     Button {
                         Task {
+                            busy = true
                             for u in localSel.sorted(by: { $0.path < $1.path }) {
                                 _ = await ssp.installPlugin(u)
                             }
-                            remote = await ssp.listPlugins()
+                            await refreshCard()
+                            busy = false
+                            needsRestart = true
                         }
                     } label: {
                         Label("Install selected (\(localSel.count))",
                               systemImage: "square.and.arrow.down")
                     }
-                    .disabled(localSel.isEmpty || !ssp.online)
+                    .disabled(localSel.isEmpty || busy || !ssp.online)
                 }
                 .padding(8)
                 .frame(minWidth: 360)
             }
         }
+        .confirmationDialog(
+            "Remove \(cardSel.count) plugin(s)?",
+            isPresented: $confirmRemove,
+            titleVisibility: .visible
+        ) {
+            Button("Move to trash", role: .destructive) {
+                let names = Array(cardSel).sorted()
+                runCardOp({ names in
+                    for n in names { _ = await ssp.removePlugin(n) }
+                }, names: names)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Files go to .trash on the card (recoverable from Files). Restart SYNTHOR afterward.")
+        }
         .task {
-            remote = await ssp.listPlugins()
+            await refreshCard()
             scanLocal()
         }
     }

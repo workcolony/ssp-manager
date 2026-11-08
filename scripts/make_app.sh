@@ -12,6 +12,11 @@ BUNDLE=$(ls -d .build/release/*.bundle 2>/dev/null | head -1 || true)
 if [ -n "$BUNDLE" ]; then
     cp -R "$BUNDLE" "$APP_DIR/Contents/MacOS/"
 fi
+# Also copy into Resources so Bundle.main finds the catalog without relying on
+# SPM's baked Bundle.module path under .build/.
+if [ -f Sources/SSPManager/PluginCatalog.json ]; then
+    cp Sources/SSPManager/PluginCatalog.json "$APP_DIR/Contents/Resources/PluginCatalog.json"
+fi
 
 # icon: source PNG -> iconset -> icns -> Resources/AppIcon.icns
 ICON_SRC="icon ideas/ssp manager.png"
