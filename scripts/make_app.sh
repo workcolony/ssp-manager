@@ -7,6 +7,11 @@ swift build -c release
 rm -rf "$APP_DIR"
 mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Resources"
 cp .build/release/SSPManager "$APP_DIR/Contents/MacOS/SSPManager"
+# SPM resource bundle (PluginCatalog.json) — beside the executable for Bundle.module
+BUNDLE=$(ls -d .build/release/*.bundle 2>/dev/null | head -1 || true)
+if [ -n "$BUNDLE" ]; then
+    cp -R "$BUNDLE" "$APP_DIR/Contents/MacOS/"
+fi
 
 # icon: source PNG -> iconset -> icns -> Resources/AppIcon.icns
 ICON_SRC="icon ideas/ssp manager.png"

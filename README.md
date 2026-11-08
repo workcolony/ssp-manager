@@ -33,8 +33,11 @@ plugins, presets and sample conversion without pulling the SD card.
 
 ### Plugins
 
-- Inventory of `.so` modules on the card vs a local staging folder
-- Select + install, then restart SYNTHOR (plugins only scan at startup)
+- **Catalog** tab — searchable cheat sheet for short picker codes (card + factory),
+  with author/kind filters, on-card status, and **Open docs** links (GitHub / wiki).
+  Catalog data lives in `PluginCatalog.json` (SRDP credited to BENDYmusic).
+- **Install** tab — inventory of `.so` modules on the card vs a local staging folder;
+  select + install, then restart SYNTHOR (plugins only scan at startup)
 - AppleDouble `._*` junk from macOS copies is filtered and avoided on upload
 
 ### Presets

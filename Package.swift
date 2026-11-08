@@ -5,6 +5,10 @@ let package = Package(
     name: "SSPManager",
     platforms: [.macOS(.v14)],
     targets: [
-        .executableTarget(name: "SSPManager", path: "Sources/SSPManager")
+        .executableTarget(
+            name: "SSPManager",
+            path: "Sources/SSPManager",
+            resources: [.copy("PluginCatalog.json")]
+        )
     ]
 )
